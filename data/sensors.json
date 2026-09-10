@@ -1,0 +1,1496 @@
+{
+  "groups": {
+    "med": "การแพทย์ / สุขภาพ",
+    "agr": "การเกษตร",
+    "eng": "วิศวกรรม / หุ่นยนต์",
+    "saf": "ความปลอดภัย / อุตสาหกรรม"
+  },
+  "bases": {
+    "1": [
+      "01",
+      "02"
+    ],
+    "2": [
+      "03",
+      "04"
+    ],
+    "3": [
+      "05",
+      "06"
+    ],
+    "4": [
+      "07",
+      "10"
+    ],
+    "5": [
+      "08",
+      "09"
+    ],
+    "6": [
+      "11",
+      "12"
+    ],
+    "7": [
+      "13",
+      "14"
+    ],
+    "8": [
+      "15",
+      "16"
+    ],
+    "9": [
+      "17",
+      "18"
+    ]
+  },
+  "baseGroup": {
+    "1": "med",
+    "2": "med",
+    "3": "agr",
+    "4": "eng",
+    "5": "eng",
+    "6": "saf",
+    "7": "saf",
+    "8": "saf",
+    "9": "agr"
+  },
+  "sensors": [
+    {
+      "no": "01",
+      "base": 1,
+      "group": "med",
+      "th": "เซนเซอร์วัดชีพจร",
+      "how": "แสงอินฟราเรดส่องผ่านปลายนิ้วไปยังตัวรับ ทุกครั้งที่หัวใจบีบตัว เลือดในนิ้วจะมากขึ้นชั่วขณะ แสงที่ทะลุถึงตัวรับจึงลดลงเล็กน้อย กลายเป็นคลื่นเล็ก ๆ บนสัญญาณ analog 0–1023 โปรแกรมกรองคลื่นนี้ออกจากค่าพื้นฐาน แล้วนับยอดคลื่นเป็นจังหวะการเต้น",
+      "parts": "บอร์ด Arduino Uno R3 · เซนเซอร์ชีพจร · จอแสดงผล 2 บรรทัด · สายจัมเปอร์",
+      "warn": "วางนิ้วแนบเบา ๆ อย่ากดแรงเพราะจะบีบเลือดจนจับจังหวะไม่ได้ ต้องนิ่งจริง ๆ ระหว่างวัด และเลขที่ได้ใช้ดูแนวโน้มเท่านั้น ห้ามใช้ตัดสินเรื่องสุขภาพ",
+      "pins": [
+        [
+          "S / OUT",
+          "A0",
+          "ana",
+          "สัญญาณ analog จากเซนเซอร์",
+          "เซนเซอร์วัดชีพจร"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์วัดชีพจร"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์วัดชีพจร"
+        ],
+        [
+          "SDA",
+          "A4",
+          "other",
+          "สายข้อมูล",
+          "จอแสดงผล"
+        ],
+        [
+          "SCL",
+          "A5",
+          "other",
+          "สายจังหวะ",
+          "จอแสดงผล"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟให้จอ",
+          "จอแสดงผล"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "จอแสดงผล"
+        ]
+      ],
+      "result": "วางนิ้วแนบนิ่งสนิท 5–10 วินาที จอจึงจะขึ้นเลข BPM พร้อมแถบ # ตอนยังไม่วางนิ้วจะขึ้น Place finger ค่าที่ได้แกว่งราว ±10 ครั้งต่อนาที ขยับนิ้วหรือกดแรงนิดเดียวเลขก็เพี้ยนทันที",
+      "next": "จับชีพจรตอนนั่งนิ่ง จดไว้ แล้วลุกวิ่งอยู่กับที่ 1 นาที จับใหม่ เทียบว่าต่างกันกี่ครั้งต่อนาที",
+      "job": "หลักการเดียวกับที่สมาร์ตวอตช์และเครื่องหนีบวัดออกซิเจนปลายนิ้วใช้ ต่างกันที่ของจริงมีวงจรกรองสัญญาณและการสอบเทียบดีกว่ามาก ตัวนี้ใช้เรียนรู้หลักการเท่านั้น อ่านค่าไปใช้ทางการแพทย์ไม่ได้",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int PIN_PULSE = A0;\n\nconst int  AMP_MIN     = 12;    // แอมพลิจูดขั้นต่ำที่ถือว่า \"มีนิ้ว\" (ปรับได้)\nconst unsigned long WIN = 1000; // หน้าต่างวัดแอมพลิจูด 1 วินาที\nconst unsigned long TIMEOUT = 2500;\n\nfloat ema = 0, baseline = 0;\nbool  beating = false, fingerOn = false;\nunsigned long lastBeat = 0, winStart = 0;\nint   bpm = 0;\nint   sigMax = 0, sigMin = 1023;\n\nvoid setup() {\n  lcd.init();\n  lcd.backlight();\n  lcd.print(\"Pulse Sensor\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Place finger\");\n  ema = baseline = analogRead(PIN_PULSE);\n  delay(1500);\n  lcd.clear();\n  winStart = millis();\n}\n\nvoid loop() {\n  int raw = analogRead(PIN_PULSE);\n  ema      = 0.75 * ema      + 0.25 * raw;\n  baseline = 0.98 * baseline + 0.02 * ema;\n\n  // ---- เก็บ max/min ในหน้าต่างเวลา ----\n  if (ema > sigMax) sigMax = ema;\n  if (ema < sigMin) sigMin = ema;\n\n  if (millis() - winStart >= WIN) {\n    int amp = sigMax - sigMin;\n    fingerOn = (amp >= AMP_MIN);\n    sigMax = 0; sigMin = 1023;\n    winStart = millis();\n    if (!fingerOn) { bpm = 0; beating = false; }\n    showScreen();\n  }\n\n  // ---- ตรวจจับ beat เฉพาะตอนมีนิ้ว ----\n  if (fingerOn) {\n    if (!beating && ema > baseline + 6 && millis() - lastBeat > 300) {\n      beating = true;\n      unsigned long gap = millis() - lastBeat;\n      lastBeat = millis();\n\n      if (gap < 2000) {\n        int v = 60000 / gap;\n        if (v >= 40 && v <= 200) { bpm = v; showScreen(); }\n      }\n    }\n    if (beating && ema < baseline + 2) beating = false;\n\n    // ---- ไม่เจอ beat นานเกินไป = รีเซ็ต ----\n    if (millis() - lastBeat > TIMEOUT && bpm != 0) {\n      bpm = 0;\n      showScreen();\n    }\n  }\n\n  delay(10);\n}\n\nvoid showScreen() {\n  lcd.setCursor(0, 0);\n  if (!fingerOn) {\n    lcd.print(\"BPM = 0         \");\n    lcd.setCursor(0, 1);\n    lcd.print(\"Place finger    \");\n    return;\n  }\n\n  lcd.print(\"BPM = \");\n  lcd.print(bpm);\n  lcd.print(\"      \");\n\n  lcd.setCursor(0, 1);\n  if (bpm == 0) {\n    lcd.print(\"Reading...      \");\n  } else {\n    int bars = constrain(map(bpm, 50, 150, 1, 16), 1, 16);\n    for (int i = 0; i < 16; i++) lcd.print(i < bars ? '#' : ' ');\n  }\n}",
+      "fun": {
+        "title": "บัซเซอร์เต้นตามหัวใจ",
+        "desc": "ทุกครั้งที่หัวใจเต้น บัซเซอร์จะดังตุ้บและ LED กระพริบพร้อมกัน ใช้การกรองสัญญาณแบบปรับเส้นฐานอัตโนมัติ จึงไม่ต้องตั้งค่า threshold เอง",
+        "parts": "บัซเซอร์",
+        "code": "const int PIN_PULSE = A0;\nconst int BUZZER    = 8;\nconst int LED       = 13;\n\nfloat ema = 0;          // ค่าที่กรองความสั่นออกแล้ว\nfloat baseline = 0;     // เส้นฐาน ปรับตามตัวเองอัตโนมัติ\nbool  beating = false;\nunsigned long lastBeat = 0;\nint bpm = 0;\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  ema = baseline = analogRead(PIN_PULSE);\n  Serial.println(\"วางนิ้วแล้วนิ่ง ๆ 5 วินาที\");\n}\n\nvoid loop() {\n  int raw = analogRead(PIN_PULSE);\n  ema      = 0.75 * ema      + 0.25 * raw;    // กรองสัญญาณรบกวน\n  baseline = 0.98 * baseline + 0.02 * ema;    // เส้นฐานไหลตามช้า ๆ\n\n  float threshold = baseline + 6;             // สูงกว่าเส้นฐานเท่านี้ = หัวใจเต้น\n\n  if (!beating && ema > threshold && millis() - lastBeat > 300) {\n    beating = true;\n    unsigned long gap = millis() - lastBeat;\n    lastBeat = millis();\n\n    if (gap < 2000) {                         // คิด BPM เฉพาะจังหวะที่สมเหตุผล\n      bpm = 60000 / gap;\n      if (bpm >= 40 && bpm <= 200) {\n        Serial.print(\"ตุ้บ!  BPM = \");\n        Serial.println(bpm);\n      }\n    }\n    digitalWrite(LED, HIGH);\n    beep(880, 40);                            // เสียงตุ้บสั้น ๆ ตามหัวใจ\n    digitalWrite(LED, LOW);\n  }\n  if (beating && ema < baseline + 2) beating = false;\n\n  delay(10);\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "lcd": {
+        "title": "BPM ตัวใหญ่บนจอ",
+        "desc": "จอโชว์ BPM พร้อมแถบหัวใจที่ยาวขึ้นตามอัตราการเต้น ไม่ต้องเปิด Serial Monitor",
+        "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
+        "code": "// จอแสดงผล โชว์ BPM ตัวใหญ่ + บัซเซอร์เต้นตามหัวใจ\n// ต้องลงไลบรารี LiquidCrystal I2C ของ Frank de Brabander\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);      // ถ้าจอไม่ติด ลองเปลี่ยนเป็น 0x3F\n\nconst int PIN_PULSE = A0;\nconst int BUZZER = 8;\n\nfloat ema = 0, baseline = 0;\nbool  beating = false;\nunsigned long lastBeat = 0;\nint bpm = 0;\n\nvoid setup() {\n  pinMode(BUZZER, OUTPUT);\n  lcd.init();\n  lcd.backlight();\n  lcd.print(\"Pulse Sensor\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Place finger\");\n  ema = baseline = analogRead(PIN_PULSE);\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  int raw = analogRead(PIN_PULSE);\n  ema      = 0.75 * ema      + 0.25 * raw;\n  baseline = 0.98 * baseline + 0.02 * ema;\n\n  if (!beating && ema > baseline + 6 && millis() - lastBeat > 300) {\n    beating = true;\n    unsigned long gap = millis() - lastBeat;\n    lastBeat = millis();\n\n    if (gap < 2000) {\n      int v = 60000 / gap;\n      if (v >= 40 && v <= 200) { bpm = v; showBpm(); }\n    }\n    tone(BUZZER, 880, 40);                // เสียงตุ้บตามหัวใจ\n  }\n  if (beating && ema < baseline + 2) beating = false;\n\n  delay(10);\n}\n\nvoid showBpm() {\n  lcd.setCursor(0, 0);\n  lcd.print(\"BPM = \");\n  lcd.print(bpm);\n  lcd.print(\"   \");\n\n  lcd.setCursor(0, 1);                    // แถบหัวใจตามความเร็ว\n  int bars = map(bpm, 50, 150, 1, 16);\n  bars = constrain(bars, 1, 16);\n  for (int i = 0; i < 16; i++) lcd.print(i < bars ? '#' : ' ');\n}"
+      },
+      "en": "Pulse Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ดลงบอร์ด",
+        "รอจนจอขึ้น Place finger แปลว่าพร้อมวัด",
+        "วางปลายนิ้วแนบเบา ๆ บนหน้าเซนเซอร์ อย่ากดแรงเพราะจะบีบเลือดจนจับจังหวะไม่ได้",
+        "อยู่นิ่งสนิท 5–10 วินาที จนเลข BPM ขึ้นและหยุดกระโดด แล้วจดค่าไว้",
+        "วิ่งอยู่กับที่ 1 นาที กลับมาวัดใหม่ เทียบว่าต่างจากตอนนั่งกี่ครั้งต่อนาที",
+        "ถ้าเลขไม่ขึ้นเลย ลองขยับตำแหน่งนิ้ว หรือลดเลข AMP_MIN ในโค้ดลง"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "02",
+      "base": 1,
+      "group": "med",
+      "th": "เซนเซอร์ฝุ่น PM2.5",
+      "how": "พัดลมเล็กดูดอากาศเข้ามาในห้องวัด แล้วยิงเลเซอร์ผ่าน ฝุ่นแต่ละเม็ดจะกระเจิงแสง ตัวรับนับจำนวนและขนาดของแสงที่กระเจิง คำนวณเป็นความเข้มข้นฝุ่นหน่วยไมโครกรัมต่อลูกบาศก์เมตร แล้วส่งมาทางสายสื่อสารเป็นชุดข้อมูล 32 ไบต์",
+      "parts": "บอร์ด Arduino Uno R3 · เซนเซอร์ฝุ่น · จอแสดงผล 2 บรรทัด · สายจัมเปอร์",
+      "warn": "ต้องรอเซนเซอร์อุ่นตัวประมาณ 30 วินาทีก่อนค่าจะนิ่ง และเซนเซอร์ตัวนี้ใช้ลอจิก 3.3V ห้ามต่อ 5V เข้าขา RX ของเซนเซอร์โดยตรง",
+      "pins": [
+        [
+          "TX",
+          "D10",
+          "dig",
+          "ขาส่งของเซนเซอร์",
+          "เซนเซอร์ฝุ่น PM2.5"
+        ],
+        [
+          "RX",
+          "D11",
+          "dig",
+          "ขารับของเซนเซอร์",
+          "เซนเซอร์ฝุ่น PM2.5"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์ฝุ่น PM2.5"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์ฝุ่น PM2.5"
+        ],
+        [
+          "SDA",
+          "A4",
+          "other",
+          "สายข้อมูล",
+          "จอแสดงผล"
+        ],
+        [
+          "SCL",
+          "A5",
+          "other",
+          "สายจังหวะ",
+          "จอแสดงผล"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟให้จอ",
+          "จอแสดงผล"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "จอแสดงผล"
+        ]
+      ],
+      "result": "จอขึ้นค่า PM2.5 เป็น ug/m3 พร้อมคำว่า Good, Moderate, Unhealthy หรือ Hazardous ในห้องปกติมักได้ 0–50 จุดธูปห่าง ๆ ค่าจะพุ่งขึ้นภายในไม่กี่วินาที ถ้าไม่มีข้อมูลเข้ามาเกิน 5 วินาที จอจะขึ้น No Signal!",
+      "next": "จดค่าทุก 10 นาทีตลอดคาบ แล้วเขียนกราฟดูว่าช่วงไหนฝุ่นสูงสุด ลองย้ายไปวัดนอกห้องเทียบด้วย",
+      "job": "สถานีตรวจวัดคุณภาพอากาศ เครื่องฟอกอากาศที่ปรับความแรงเองตามค่าฝุ่น ระบบเฝ้าระวังฝุ่นในโรงงาน",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n#include <SoftwareSerial.h>\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\nSoftwareSerial pms(10, 11);\nbyte buf[32];\nunsigned long lastValidRead = 0;\nconst unsigned long TIMEOUT = 5000;   // ถ้าไม่มีข้อมูลใหม่ใน 5 วิ = ค้าง\n\nvoid setup() {\n  Serial.begin(9600);\n  pms.begin(9600);\n\n  lcd.init();\n  lcd.backlight();\n  lcd.setCursor(0, 0);\n  lcd.print(\"PM2.5 Monitor\");\n  delay(1500);\n  lcd.clear();\n  lastValidRead = millis();\n}\n\nvoid loop() {\n  // หาไบต์เริ่มต้นแพ็กเก็ตให้ตรงก่อน\n  if (pms.available() > 0 && pms.peek() != 0x42) {\n    pms.read();   // ทิ้งไบต์ขยะจนกว่าจะเจอ 0x42\n    return;\n  }\n\n  if (pms.available() >= 32) {\n    pms.readBytes(buf, 32);\n    if (buf[0] == 0x42 && buf[1] == 0x4D) {\n      int pm25 = buf[12] * 256 + buf[13];\n      lastValidRead = millis();\n\n      Serial.print(\"PM2.5 = \");\n      Serial.print(pm25);\n      Serial.println(\" ug/m3\");\n\n      lcd.setCursor(0, 0);\n      lcd.print(\"PM2.5:        \");\n      lcd.setCursor(7, 0);\n      lcd.print(pm25);\n      lcd.print(\" ug/m3\");\n\n      lcd.setCursor(0, 1);\n      if (pm25 <= 25)      lcd.print(\"Air: Good      \");\n      else if (pm25 <= 37) lcd.print(\"Air: Moderate  \");\n      else if (pm25 <= 50) lcd.print(\"Air: Unhealthy \");\n      else                 lcd.print(\"Air: Hazardous \");\n    }\n  }\n\n  // ถ้าไม่มีข้อมูลใหม่นานเกินไป แจ้งเตือนว่าค้าง\n  if (millis() - lastValidRead > TIMEOUT) {\n    lcd.setCursor(0, 0);\n    lcd.print(\"No Signal!      \");\n    lcd.setCursor(0, 1);\n    lcd.print(\"Check sensor    \");\n  }\n}",
+      "en": "PM2.5 Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ดลงบอร์ด",
+        "รอเซนเซอร์อุ่นตัวราว 30 วินาที จนตัวเลขบนจอนิ่ง",
+        "จดค่าในห้องปกติไว้เป็นค่าเริ่มต้นเปรียบเทียบ",
+        "จุดธูปหรือไม้ขีดห่างจากช่องดูดอากาศราว 30 ซม. ดูค่าพุ่งขึ้นและคำเตือนบนจอเปลี่ยน",
+        "ดับควันแล้วจับเวลาว่ากี่วินาทีค่าจึงกลับมาเท่าเดิม"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "03",
+      "base": 2,
+      "group": "med",
+      "th": "เซนเซอร์อุณหภูมิและความชื้น",
+      "how": "ภายในมีสองส่วนคือเทอร์มิสเตอร์ที่เปลี่ยนความต้านทานตามอุณหภูมิ และแผ่นเก็บประจุที่เปลี่ยนค่าตามความชื้น ชิปในตัวแปลงทั้งสองค่าเป็นดิจิทัลแล้วส่งออกทางสายเส้นเดียว ความละเอียดอยู่ที่ราว 1 องศาและ 1 เปอร์เซ็นต์ จึงเห็นตัวเลขขยับเป็นขั้น ๆ ไม่ละเอียดเป็นทศนิยม",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลวัดอุณหภูมิและความชื้น · สายจัมเปอร์ 3 เส้น",
+      "warn": "ต้องติดตั้งไลบรารีเซนเซอร์อุณหภูมิและความชื้น (ชื่อไลบรารีดูได้จากบรรทัด #include ในโค้ด) ก่อน และอ่านค่าถี่กว่า 2 วินาทีไม่ได้",
+      "pins": [
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "สัญญาณดิจิทัลเส้นเดียว",
+          "เซนเซอร์อุณหภูมิและความชื้น"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์อุณหภูมิและความชื้น"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์อุณหภูมิและความชื้น"
+        ],
+        [
+          "SDA",
+          "A4",
+          "other",
+          "สายข้อมูล",
+          "จอแสดงผล"
+        ],
+        [
+          "SCL",
+          "A5",
+          "other",
+          "สายจังหวะ",
+          "จอแสดงผล"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟให้จอ",
+          "จอแสดงผล"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "จอแสดงผล"
+        ]
+      ],
+      "result": "จอขึ้น Temp และ Humi อัปเดตทุก 2 วินาที ห้องแอร์มักได้ราว 25 องศา 55 เปอร์เซ็นต์ หายใจรดเซนเซอร์ความชื้นจะขึ้นเร็วแต่ลดลงช้าเป็นสิบวินาที เกิน 32 องศาจะขึ้น HOT! ถ้าอ่านค่าไม่ได้จะขึ้น Sensor Error",
+      "next": "วัดเทียบ 3 จุดในห้อง คือใกล้แอร์ กลางห้อง และริมหน้าต่าง ดูว่าต่างกันกี่องศา",
+      "job": "โรงเรือนเพาะปลูก ห้องเก็บของที่ต้องคุมความชื้น ระบบระบายอากาศในฟาร์มสัตว์",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n#include <DHT.h>\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n#define DHTPIN  2\n#define DHTTYPE DHT11\nDHT dht(DHTPIN, DHTTYPE);\n\nfloat limitTemp = 32.0;                   // เกินเท่านี้ถือว่าร้อน\n\nvoid setup() {\n  lcd.init();\n  lcd.backlight();\n  dht.begin();\n  lcd.print(\"Weather Station\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  float t = dht.readTemperature();\n  float h = dht.readHumidity();\n\n  lcd.setCursor(0, 0);\n  if (isnan(t) || isnan(h)) {\n    lcd.print(\"Sensor Error    \");\n    lcd.setCursor(0, 1);\n    lcd.print(\"Check wiring    \");\n    delay(2000);\n    return;\n  }\n\n  lcd.print(\"Temp \");  lcd.print(t, 1);  lcd.print((char)223); lcd.print(\"C   \");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Humi \");  lcd.print(h, 0);  lcd.print(\" %\");\n\n  if (t > limitTemp) {\n    lcd.print(\"  HOT!\");\n  } else {\n    lcd.print(\"  OK  \");\n  }\n  delay(2000);\n}",
+      "fun": {
+        "title": "เครื่องเฝ้าโรงเรือน",
+        "desc": "อุณหภูมิเกิน 32 องศา บัซเซอร์เตือนสามครั้งและ LED ติดค้าง แก้เลข limitTemp เพื่อเปลี่ยนเกณฑ์ได้",
+        "parts": "บัซเซอร์",
+        "code": "// ต้องลงไลบรารีเซนเซอร์อุณหภูมิและความชื้น\n\n#include <DHT.h>\n#define DHTPIN  2\n#define DHTTYPE DHT11          // ของจริงเป็น DHT11\nDHT dht(DHTPIN, DHTTYPE);\n\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nfloat limitTemp = 32.0;        // เกิน 32 องศาถือว่าร้อนเกินไป\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  dht.begin();\n}\n\nvoid loop() {\n  float t = dht.readTemperature();\n  float h = dht.readHumidity();\n\n  if (isnan(t) || isnan(h)) {           // อ่านไม่ได้ ให้ข้ามรอบนี้\n    Serial.println(\"อ่านค่าไม่ได้ ตรวจสายอีกครั้ง\");\n    delay(2000);\n    return;\n  }\n\n  Serial.print(\"อุณหภูมิ \");  Serial.print(t);\n  Serial.print(\" C   ความชื้น \"); Serial.print(h); Serial.print(\" %\");\n\n  if (t > limitTemp) {\n    Serial.println(\"   >> ร้อนเกินไป!\");\n    digitalWrite(LED, HIGH);\n    for (int i = 0; i < 3; i++) { beep(2000, 100); delay(100); }\n  } else {\n    Serial.println(\"   ปกติ\");\n    digitalWrite(LED, LOW);\n  }\n  delay(2000);\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "lcd": {
+        "title": "สถานีอากาศเต็มจอ",
+        "desc": "จอโชว์อุณหภูมิและความชื้นตลอดเวลา ร้อนเกิน 32 องศาจะขึ้น HOT! และบัซเซอร์เตือน",
+        "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
+        "code": "// จอแสดงผล โชว์อุณหภูมิและความชื้น ร้อนเกินกำหนดบัซเซอร์เตือน\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n#include <DHT.h>\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n#define DHTPIN  2\n#define DHTTYPE DHT11\nDHT dht(DHTPIN, DHTTYPE);\n\nconst int BUZZER = 8;\nfloat limitTemp = 32.0;                   // เกินเท่านี้ถือว่าร้อน\n\nvoid setup() {\n  pinMode(BUZZER, OUTPUT);\n  lcd.init();\n  lcd.backlight();\n  dht.begin();\n  lcd.print(\"Weather Station\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  float t = dht.readTemperature();\n  float h = dht.readHumidity();\n\n  lcd.setCursor(0, 0);\n  if (isnan(t) || isnan(h)) {\n    lcd.print(\"Sensor Error    \");\n    lcd.setCursor(0, 1);\n    lcd.print(\"Check wiring    \");\n    delay(2000);\n    return;\n  }\n\n  lcd.print(\"Temp \");  lcd.print(t, 1);  lcd.print((char)223); lcd.print(\"C   \");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Humi \");  lcd.print(h, 0);  lcd.print(\" %\");\n\n  if (t > limitTemp) {\n    lcd.print(\"  HOT!\");\n    for (int i = 0; i < 3; i++) { tone(BUZZER, 2000, 100); delay(200); }\n  } else {\n    lcd.print(\"  OK  \");\n  }\n  delay(2000);\n}"
+      },
+      "en": "Temperature & Humidity Sensor",
+      "steps": [
+        "ติดตั้งไลบรารีเซนเซอร์อุณหภูมิและความชื้นก่อน (ชื่ออยู่ในบรรทัด #include ของโค้ด)",
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
+        "จดอุณหภูมิและความชื้นในห้องไว้เป็นค่าเริ่มต้น",
+        "หายใจรดเซนเซอร์ราว 5 วินาที ดูความชื้นพุ่งขึ้นทันที",
+        "จับเวลาว่ากี่วินาทีความชื้นจึงกลับมาเท่าเดิม",
+        "กำเซนเซอร์ไว้ในมือจนอุณหภูมิเกิน 32 องศา จอจะขึ้น HOT!"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "04",
+      "base": 2,
+      "group": "agr",
+      "th": "เซนเซอร์แสง",
+      "how": "ตัวต้านทานแปรค่าตามแสง เมื่อสว่างความต้านทานต่ำ เมื่อมืดความต้านทานสูง โมดูลต่อร่วมกับตัวต้านทานคงที่เป็นวงจรแบ่งแรงดัน จึงได้แรงดันที่เปลี่ยนตามความสว่าง ส่งเข้าขา analog ออกมาเป็นเลข 0–1023",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์แสง · สายจัมเปอร์ 3 เส้น",
+      "warn": "โมดูลบางตัวให้ค่ามากเมื่อมืด บางตัวกลับกัน ให้ทดลองบังแสงดูก่อนตั้งเกณฑ์",
+      "pins": [
+        [
+          "AO",
+          "A0",
+          "ana",
+          "ค่าความสว่าง 0–1023",
+          "เซนเซอร์แสง"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์แสง"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์แสง"
+        ],
+        [
+          "SDA",
+          "A4",
+          "other",
+          "สายข้อมูล",
+          "จอแสดงผล"
+        ],
+        [
+          "SCL",
+          "A5",
+          "other",
+          "สายจังหวะ",
+          "จอแสดงผล"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟให้จอ",
+          "จอแสดงผล"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "จอแสดงผล"
+        ]
+      ],
+      "result": "จอบรรทัดบนขึ้น Light: ตามด้วยตัวเลข อัปเดตทุก 0.2 วินาที ถ้าค่าเกิน 300 ถือว่ามืด จอขึ้น Status: Dark และไฟบนบอร์ดขา 13 ติด ต่ำกว่านั้นขึ้น Status: Bright",
+      "next": "จดค่าตอนเปิดไฟ ปิดไฟ และเอามือบัง แล้วแก้เลข 300 ในโค้ดให้เหมาะกับห้องจริง",
+      "job": "ไฟถนนและไฟสนามที่ติดเองตอนค่ำ ม่านอัตโนมัติ ระบบเปิดปิดไฟในโรงเรือนเพาะเห็ด",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n\nconst int PIN_LDR = A0;\nconst int PIN_LED = 13;\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(PIN_LED, OUTPUT);\n\n  lcd.init();\n  lcd.backlight();\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Light Monitor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  int light = analogRead(PIN_LDR);\n\n  Serial.print(\"Light = \");\n  Serial.println(light);\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Light: \");\n  lcd.print(light);\n  lcd.print(\"    \");\n\n  lcd.setCursor(0, 1);\n\n  // กรณีนี้มืดแล้วค่า light สูงกว่า 300\n  if (light > 300) {\n    digitalWrite(PIN_LED, HIGH);\n    lcd.print(\"Status: Dark    \");\n  } else {\n    digitalWrite(PIN_LED, LOW);\n    lcd.print(\"Status: Bright  \");\n  }\n\n  delay(200);\n}",
+      "fun": {
+        "title": "กล่องกันขโมย",
+        "desc": "ตอนเริ่มโปรแกรมจะจำระดับแสงตอนปิดฝาไว้เอง พอมีคนเปิดฝาให้แสงเข้า ไซเรนจะร้องทันที ใช้ได้กับกล่องทุกสีทุกขนาด",
+        "parts": "บัซเซอร์",
+        "code": "const int PIN_LDR = A0;\nconst int BUZZER  = 8;\nconst int LED     = 13;\n\nint  darkValue = 0;        // ค่าตอนปิดฝา จำไว้ตอนเริ่ม\nbool alarmOn   = false;\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n\n  Serial.println(\"ปิดฝากล่องไว้ กำลังจำค่าความมืด...\");\n  delay(3000);\n  darkValue = analogRead(PIN_LDR);       // จำสภาพตอนปิดฝา\n  Serial.print(\"ค่าตอนปิดฝา = \");\n  Serial.println(darkValue);\n  Serial.println(\"พร้อมแล้ว ลองเปิดฝาดู\");\n}\n\nvoid loop() {\n  int light = analogRead(PIN_LDR);\n  int diff  = abs(light - darkValue);\n\n  if (diff > 120) {                      // แสงเปลี่ยนไปมาก = ฝาถูกเปิด\n    if (!alarmOn) {\n      alarmOn = true;\n      Serial.println(\"!! มีคนเปิดกล่อง !!\");\n    }\n    digitalWrite(LED, HIGH);\n    beep(2500, 100);\n    digitalWrite(LED, LOW);\n    delay(100);\n  } else {\n    if (alarmOn) { alarmOn = false; Serial.println(\"ปิดฝาแล้ว ปลอดภัย\"); }\n    delay(100);\n  }\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "en": "Light Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
+        "จดค่า Light ตอนเปิดไฟห้องปกติ",
+        "เอามือบังเซนเซอร์ ดูค่าเปลี่ยน จอขึ้น Status: Dark และไฟบนบอร์ดขา 13 ติด",
+        "ใช้ไฟฉายมือถือส่องเซนเซอร์ แล้วจดค่าที่ได้",
+        "เอาค่าทั้งสามแบบมาเทียบกัน แล้วแก้เลข 300 ในโค้ดให้เหมาะกับห้องจริง"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "05",
+      "base": 3,
+      "group": "agr",
+      "th": "รีเลย์",
+      "how": "รีเลย์คือสวิตช์ที่สั่งงานด้วยไฟฟ้า เมื่อจ่ายไฟให้ขดลวดจะเกิดสนามแม่เหล็กดึงหน้าสัมผัสให้เปลี่ยนตำแหน่ง วงจรฝั่งที่ถูกควบคุมกับฝั่ง Arduino แยกขาดจากกันทางไฟฟ้า โมดูลนี้เป็นแบบ active LOW คือสั่ง LOW ให้ทำงาน สั่ง HIGH ให้หยุด",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลรีเลย์ 1 ช่อง · หลอดไฟ DC หรือพัดลมเล็ก",
+      "warn": "ห้ามต่อไฟบ้าน 220 โวลต์ในกิจกรรมนี้เด็ดขาด ให้ทดลองกับหลอดไฟ DC หรือพัดลมเล็กเท่านั้น",
+      "pins": [
+        [
+          "IN",
+          "D8",
+          "dig",
+          "สัญญาณสั่งงาน",
+          "รีเลย์"
+        ],
+        [
+          "COM / NO",
+          "โหลด",
+          "other",
+          "ต่อกับอุปกรณ์ที่ต้องการควบคุม",
+          "รีเลย์"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "รีเลย์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "รีเลย์"
+        ],
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "ขาสัญญาณของปุ่ม",
+          "ปุ่มกด"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "ปุ่มกด"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "ปุ่มกด"
+        ]
+      ],
+      "result": "กดปุ่มหนึ่งครั้ง ได้ยินเสียงคลิกและไฟบนโมดูลรีเลย์ติด กดอีกครั้งดับ Serial Monitor ขึ้น Relay: ON และ Relay: OFF สลับกัน โปรแกรมกันปุ่มเด้งไว้ 50 มิลลิวินาที กดรัวก็ไม่นับซ้ำ",
+      "next": "เอารีเลย์ไปคุมพัดลมหรือหลอดไฟแบบใช้ถ่าน แทนที่จะปล่อยหน้าสัมผัสว่าง จะได้เห็นว่ามันสั่งงานของจริงได้",
+      "job": "ระบบรดน้ำอัตโนมัติ ตู้ควบคุมไฟฟ้าในโรงงาน สมาร์ตโฮมที่สั่งเปิดปิดเครื่องใช้ไฟฟ้า",
+      "code": "const int PIN_RELAY = 8;\nconst int PIN_BUTTON = 2;\n\nbool relayState = false;       // false = ปิด, true = เปิด\nint lastButtonState = HIGH;\nint buttonState = HIGH;\n\nunsigned long lastDebounceTime = 0;\nconst unsigned long debounceDelay = 50;\n\nvoid setup() {\n  pinMode(PIN_RELAY, OUTPUT);\n  pinMode(PIN_BUTTON, INPUT_PULLUP);\n\n  // โมดูลรีเลย์ Active LOW: HIGH = ปิด\n  digitalWrite(PIN_RELAY, HIGH);\n\n  Serial.begin(9600);\n  Serial.println(\"ระบบพร้อมใช้งาน\");\n  Serial.println(\"กดปุ่มเพื่อเปิด/ปิดรีเลย์\");\n  Serial.println(\"Relay: OFF\");\n}\n\nvoid loop() {\n  int reading = digitalRead(PIN_BUTTON);\n\n  // ตรวจพบการเปลี่ยนแปลงของปุ่ม\n  if (reading != lastButtonState) {\n    lastDebounceTime = millis();\n  }\n\n  // รอให้สัญญาณนิ่งก่อนประมวลผล\n  if ((millis() - lastDebounceTime) > debounceDelay) {\n    if (reading != buttonState) {\n      buttonState = reading;\n\n      // ตรวจเฉพาะตอนกดปุ่ม\n      if (buttonState == LOW) {\n        relayState = !relayState;\n\n        if (relayState == true) {\n          digitalWrite(PIN_RELAY, LOW);   // เปิดรีเลย์\n          Serial.println(\"Relay: ON\");\n        } else {\n          digitalWrite(PIN_RELAY, HIGH);  // ปิดรีเลย์\n          Serial.println(\"Relay: OFF\");\n        }\n      }\n    }\n  }\n\n  lastButtonState = reading;\n}",
+      "fun": {
+        "title": "สวิตช์จับเวลา",
+        "desc": "กดปุ่มเปิดปิดอุปกรณ์ผ่านรีเลย์ พร้อมนับว่าเปิดมากี่วินาที เสียงสูงเมื่อเปิด เสียงต่ำเมื่อปิด",
+        "parts": "บัซเซอร์ + ปุ่มกด",
+        "code": "//           บัซเซอร์ +->D9, -->GND   (รีเลย์ใช้ D8 อยู่ บัซเซอร์จึงย้ายมา D9)\n\nconst int RELAY  = 8;\nconst int BUTTON = 2;\nconst int BUZZER = 9;\nconst int LED    = 13;\n\nbool relayOn   = false;\nbool lastState = HIGH;\nunsigned long onSince = 0;\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(RELAY, OUTPUT);\n  pinMode(BUTTON, INPUT_PULLUP);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  digitalWrite(RELAY, HIGH);              // HIGH = ปิด (โมดูล active LOW)\n  Serial.println(\"กดปุ่มเพื่อเปิดปิดอุปกรณ์\");\n}\n\nvoid loop() {\n  bool now = digitalRead(BUTTON);\n\n  if (lastState == HIGH && now == LOW) {  // จังหวะที่เพิ่งกดลง\n    relayOn = !relayOn;\n    digitalWrite(RELAY, relayOn ? LOW : HIGH);\n    digitalWrite(LED, relayOn);\n\n    if (relayOn) {\n      onSince = millis();\n      Serial.println(\"เปิดอุปกรณ์\");\n      beep(1500, 80);\n    } else {\n      unsigned long sec = (millis() - onSince) / 1000;\n      Serial.print(\"ปิดอุปกรณ์  เปิดไปทั้งหมด \");\n      Serial.print(sec);\n      Serial.println(\" วินาที\");\n      beep(800, 80);\n    }\n    delay(50);                            // กันอาการเด้งของปุ่ม\n  }\n  lastState = now;\n\n  if (relayOn) {                          // รายงานทุก 1 วินาทีขณะเปิดอยู่\n    static unsigned long tick = 0;\n    if (millis() - tick > 1000) {\n      tick = millis();\n      Serial.print(\"เปิดมาแล้ว \");\n      Serial.print((millis() - onSince) / 1000);\n      Serial.println(\" วินาที\");\n    }\n  }\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "en": "Relay Module",
+      "steps": [
+        "ต่อสายตามตารางด้านบน ห้ามต่อไฟบ้าน 220 โวลต์เด็ดขาด ให้ใช้กับหลอดไฟหรือพัดลมที่ใช้ถ่านเท่านั้น",
+        "อัปโหลดโค้ด แล้วเปิด Serial Monitor ที่ 9600",
+        "กดปุ่มหนึ่งครั้ง ฟังเสียงคลิกของรีเลย์และดูไฟบนโมดูลติด",
+        "ดู Serial Monitor ว่าขึ้น Relay: ON สลับกับ Relay: OFF ตามที่กด",
+        "ลองกดรัว ๆ ดูว่าโปรแกรมกันปุ่มเด้งได้จริงไหม"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "06",
+      "base": 3,
+      "group": "eng",
+      "th": "โรตารีเอนโคดเดอร์",
+      "how": "ภายในมีจานหมุนที่ทำให้หน้าสัมผัสสองชุดคือ CLK และ DT ต่อและตัดสลับกันเป็นจังหวะ เมื่อหมุน สองสัญญาณนี้จะเปลี่ยนไม่พร้อมกัน โปรแกรมจึงรู้ทั้งจำนวนขั้นที่หมุนและทิศทาง จากลำดับว่าขาไหนเปลี่ยนก่อน",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลโรตารีเอนโคดเดอร์ · สายจัมเปอร์ 5 เส้น",
+      "warn": "หมุนช้า ๆ ในการทดลองแรก ถ้าหมุนเร็วเกินไป Arduino อาจนับตกหล่นได้",
+      "pins": [
+        [
+          "CLK",
+          "D2",
+          "dig",
+          "สัญญาณจังหวะ",
+          "โรตารีเอนโคดเดอร์"
+        ],
+        [
+          "DT",
+          "D3",
+          "dig",
+          "สัญญาณบอกทิศทาง",
+          "โรตารีเอนโคดเดอร์"
+        ],
+        [
+          "SW",
+          "D4",
+          "dig",
+          "ปุ่มกดในตัว",
+          "โรตารีเอนโคดเดอร์"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "โรตารีเอนโคดเดอร์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "โรตารีเอนโคดเดอร์"
+        ],
+        [
+          "SDA",
+          "A4",
+          "other",
+          "สายข้อมูล",
+          "จอแสดงผล"
+        ],
+        [
+          "SCL",
+          "A5",
+          "other",
+          "สายจังหวะ",
+          "จอแสดงผล"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟให้จอ",
+          "จอแสดงผล"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "จอแสดงผล"
+        ]
+      ],
+      "result": "จอขึ้น Position: ตามด้วยตัวเลข หมุนขวาเพิ่มทีละ 1 หมุนซ้ายลดทีละ 1 กดปุ่มบนแกนหมุนค่ากลับเป็น 0 และ Serial Monitor ขึ้น Reset หมุนเร็วมากอาจนับตกไปบ้างเพราะโปรแกรมอ่านแบบวนลูปธรรมดา",
+      "next": "เอาค่า position ไปคุมความสว่างของหลอดไฟด้วย PWM หรือคุมมุมของเซอร์โวมอเตอร์",
+      "job": "ปุ่มปรับระดับเสียงในเครื่องเสียง เครื่องพิมพ์สามมิติและ CNC ที่ต้องรู้ตำแหน่งแกน หุ่นยนต์ที่นับรอบล้อ",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n\nconst int CLK = 2;\nconst int DT  = 3;\nconst int SW  = 4;\n\nint position = 0;\nint lastClk;\nint lastButtonState = HIGH;\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nvoid setup() {\n  pinMode(CLK, INPUT);\n  pinMode(DT, INPUT);\n  pinMode(SW, INPUT_PULLUP);\n\n  lastClk = digitalRead(CLK);\n\n  Serial.begin(9600);\n\n  lcd.init();\n  lcd.backlight();\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Encoder Monitor\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Position: 0\");\n\n  delay(1500);\n  lcd.clear();\n  showPosition();\n}\n\nvoid loop() {\n  int clk = digitalRead(CLK);\n\n  // ตรวจจับการหมุน Encoder\n  if (clk != lastClk) {\n    if (digitalRead(DT) != clk) {\n      position++;       // หมุนขวา\n    } else {\n      position--;       // หมุนซ้าย\n    }\n\n    Serial.print(\"Position: \");\n    Serial.println(position);\n\n    showPosition();\n  }\n\n  lastClk = clk;\n\n  // ตรวจจับการกดปุ่มแบบกดครั้งเดียว\n  int buttonState = digitalRead(SW);\n\n  if (lastButtonState == HIGH && buttonState == LOW) {\n    position = 0;\n\n    Serial.println(\"Reset\");\n\n    lcd.setCursor(0, 1);\n    lcd.print(\"Position: 0     \");\n\n    delay(50); // ป้องกันสัญญาณเด้ง\n  }\n\n  lastButtonState = buttonState;\n}\n\n// ฟังก์ชันแสดงค่าบน LCD\nvoid showPosition() {\n  lcd.setCursor(0, 0);\n  lcd.print(\"Encoder Value:  \");\n\n  lcd.setCursor(0, 1);\n  lcd.print(\"Position: \");\n  lcd.print(position);\n  lcd.print(\"      \");  // ลบตัวเลขเก่าที่ค้างอยู่\n}",
+      "fun": {
+        "title": "หมุนปรับความสว่าง",
+        "desc": "หมุนเพื่อเพิ่มลดความสว่างไฟทีละ 5% มีเสียงติ๊กทุกขั้น กดปุ่มบนแกนหมุนเพื่อรีเซ็ตกลับ 50% Serial Monitor วาดแถบกราฟให้ด้วย",
+        "parts": "บัซเซอร์ + LED",
+        "code": "//           LED ผ่านตัวต้านทาน 220 โอห์ม -> D9 | บัซเซอร์ +->D8, -->GND\n\nconst int CLK = 2, DT = 3, SW = 4;\nconst int LED_PWM = 9;               // ต้องเป็นขา PWM (มีเครื่องหมาย ~)\nconst int BUZZER  = 8;\n\nint level = 50;                      // ความสว่างเริ่มต้น 50%\nint lastClk;\n\nvoid setup() {\n  pinMode(CLK, INPUT);\n  pinMode(DT, INPUT);\n  pinMode(SW, INPUT_PULLUP);\n  pinMode(LED_PWM, OUTPUT);\n  pinMode(BUZZER, OUTPUT);\n  Serial.begin(9600);\n  lastClk = digitalRead(CLK);\n  show();\n}\n\nvoid loop() {\n  int clk = digitalRead(CLK);\n\n  if (clk != lastClk) {\n    if (digitalRead(DT) != clk) level += 5;   // หมุนขวา สว่างขึ้น\n    else                        level -= 5;   // หมุนซ้าย มืดลง\n    level = constrain(level, 0, 100);\n    show();\n    beep(1200, 15);                           // เสียงติ๊กเบา ๆ ทุกขั้น\n  }\n  lastClk = clk;\n\n  if (digitalRead(SW) == LOW) {               // กดปุ่ม = กลับไป 50%\n    level = 50;\n    show();\n    Serial.println(\"รีเซ็ตกลับ 50%\");\n    beep(600, 120);\n    delay(300);\n  }\n}\n\nvoid show() {\n  analogWrite(LED_PWM, map(level, 0, 100, 0, 255));\n  Serial.print(\"ความสว่าง \");\n  Serial.print(level);\n  Serial.print(\"%  \");\n  for (int i = 0; i < level / 5; i++) Serial.print(\"#\");   // แถบกราฟ\n  Serial.println();\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "lcd": {
+        "title": "จอโชว์ความสว่าง",
+        "desc": "หมุนแล้วจอขึ้นเปอร์เซ็นต์พร้อมแถบทึบเต็มบรรทัดล่าง เห็นผลชัดกว่าดูใน Serial Monitor มาก",
+        "parts": "บัซเซอร์ + LED + จอแสดงผล 2 บรรทัด",
+        "code": "// จอแสดงผล โชว์เปอร์เซ็นต์ความสว่างพร้อมแถบกราฟ หมุนปรับ กดปุ่มรีเซ็ต\n//          บัซเซอร์ +->D8 | จอแสดงผล SDA->A4, SCL->A5\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int CLK = 2, DT = 3, SW = 4;\nconst int LED_PWM = 9;\nconst int BUZZER  = 8;\n\nint level = 50;\nint lastClk;\n\nvoid setup() {\n  pinMode(CLK, INPUT); pinMode(DT, INPUT); pinMode(SW, INPUT_PULLUP);\n  pinMode(LED_PWM, OUTPUT); pinMode(BUZZER, OUTPUT);\n  lcd.init(); lcd.backlight();\n  lastClk = digitalRead(CLK);\n  lcd.print(\"Turn to dim LED\");\n  delay(1200);\n  lcd.clear();\n  show();\n}\n\nvoid loop() {\n  int clk = digitalRead(CLK);\n  if (clk != lastClk) {\n    if (digitalRead(DT) != clk) level += 5;    // หมุนขวา\n    else                        level -= 5;    // หมุนซ้าย\n    level = constrain(level, 0, 100);\n    show();\n    tone(BUZZER, 1200, 12);\n  }\n  lastClk = clk;\n\n  if (digitalRead(SW) == LOW) {                // กดปุ่มรีเซ็ต\n    level = 50;\n    show();\n    tone(BUZZER, 600, 120);\n    delay(300);\n  }\n}\n\nvoid show() {\n  analogWrite(LED_PWM, map(level, 0, 100, 0, 255));\n  lcd.setCursor(0, 0);\n  lcd.print(\"Brightness \");\n  lcd.print(level);\n  lcd.print(\"%   \");\n\n  lcd.setCursor(0, 1);\n  int bars = map(level, 0, 100, 0, 16);\n  for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n}"
+      },
+      "en": "Rotary Encoder",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
+        "หมุนแกนไปทางขวาช้า ๆ ทีละคลิก ดูเลข Position เพิ่มทีละ 1",
+        "หมุนกลับทางซ้าย ดูเลขลดลง",
+        "กดปุ่มบนแกนหมุน ค่าจะกลับเป็น 0",
+        "หมุนเร็ว ๆ 10 คลิก แล้วเทียบว่าเลขบนจอตรงกับจำนวนที่หมุนไหม"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "07",
+      "base": 4,
+      "group": "eng",
+      "th": "เซนเซอร์ตรวจจับเส้น",
+      "how": "ยิงแสงอินฟราเรดลงพื้นแล้ววัดแสงที่สะท้อนกลับ พื้นสีขาวสะท้อนได้ดี พื้นสีดำดูดกลืนแสงเกือบหมด โมดูลเปรียบเทียบระดับแสงกับเกณฑ์ที่ตั้งด้วยน็อตปรับ แล้วส่งออกเป็นสัญญาณดิจิทัลค่าเดียวว่าเจอเส้นหรือไม่",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลตรวจจับเส้น · กระดาษขาวติดเทปดำ",
+      "warn": "ให้เซนเซอร์อยู่สูงจากพื้นราว 5–10 มิลลิเมตร แล้วหมุนน็อตปรับความไวจนไฟบนโมดูลเปลี่ยนตอนสลับสีพื้น",
+      "pins": [
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "สัญญาณดิจิทัล",
+          "เซนเซอร์ตรวจจับเส้น"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์ตรวจจับเส้น"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์ตรวจจับเส้น"
+        ],
+        [
+          "SDA",
+          "A4",
+          "other",
+          "สายข้อมูล",
+          "จอแสดงผล"
+        ],
+        [
+          "SCL",
+          "A5",
+          "other",
+          "สายจังหวะ",
+          "จอแสดงผล"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟให้จอ",
+          "จอแสดงผล"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "จอแสดงผล"
+        ]
+      ],
+      "result": "จอบรรทัดบนขึ้น Sensor: 0 หรือ 1 บรรทัดล่างขึ้น White Surface หรือ Black Surface อัปเดตทุก 0.2 วินาที เลื่อนเซนเซอร์ผ่านเทปดำแล้วข้อความสลับทันที ถ้าขึ้นกลับด้านให้สลับเงื่อนไข LOW กับ HIGH ในโค้ด",
+      "next": "ใช้เซนเซอร์สองตัวคู่กับมอเตอร์สองข้าง ทำหุ่นยนต์เดินตามเส้น ตัวไหนเจอดำก็ให้ล้อฝั่งนั้นช้าลง",
+      "job": "หุ่นยนต์ขนของในโรงงานที่วิ่งตามเส้นบนพื้น รถแข่งหุ่นยนต์เดินตามเส้น เครื่องนับชิ้นงานบนสายพาน",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n\nconst int PIN_IR = 2;\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nvoid setup() {\n  pinMode(PIN_IR, INPUT);\n  Serial.begin(9600);\n\n  lcd.init();\n  lcd.backlight();\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"IR Line Sensor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  int value = digitalRead(PIN_IR);\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Sensor: \");\n  lcd.print(value);\n  lcd.print(\"        \");\n\n  lcd.setCursor(0, 1);\n\n  if (value == LOW) {\n    Serial.println(\"พื้นขาว\");\n    lcd.print(\"White Surface   \");\n  } else {\n    Serial.println(\"เจอเส้นดำ\");\n    lcd.print(\"Black Surface     \");\n  }\n\n  delay(200);\n}",
+      "fun": {
+        "title": "เครื่องนับเส้น",
+        "desc": "เลื่อนเซนเซอร์ผ่านแถบดำ นับและบี๊บทีละเส้น ครบ 10 เส้นจะเล่นเสียงฉลองแล้วเริ่มนับใหม่",
+        "parts": "บัซเซอร์",
+        "code": "const int PIN_IR = 2;\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nint  count = 0;\nbool onLine = false;\n\nvoid setup() {\n  pinMode(PIN_IR, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  delay(500);\n  onLine = (digitalRead(PIN_IR) == HIGH);    // จำสภาพเริ่มต้น กันนับผิดตอนเปิดเครื่อง\n  Serial.println(\"เลื่อนเซนเซอร์ผ่านแถบดำ แล้วดูจำนวนที่นับได้\");\n}\n\nvoid loop() {\n  bool black = (digitalRead(PIN_IR) == HIGH);   // HIGH = ไม่สะท้อน = เส้นดำ\n\n  if (black && !onLine) {                       // เพิ่งเข้าเส้นดำ นับ 1\n    count++;\n    Serial.print(\"เส้นที่ \");\n    Serial.println(count);\n    digitalWrite(LED, HIGH);\n    beep(1800, 60);\n    digitalWrite(LED, LOW);\n  }\n  onLine = black;\n\n  if (count >= 10) {                            // ครบ 10 เส้น ฉลอง\n    Serial.println(\"ครบ 10 เส้นแล้ว! เริ่มนับใหม่\");\n    beep(1000,120); beep(1400,120); beep(2000,220);\n    count = 0;\n    delay(500);\n  }\n  delay(20);\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "en": "Line Tracking Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
+        "เตรียมกระดาษขาวติดเทปกาวสีดำเป็นเส้น",
+        "ถือเซนเซอร์ให้สูงจากพื้นราว 5–10 มิลลิเมตร แล้วเลื่อนผ่านเส้นดำ",
+        "ดูจอสลับระหว่าง White Surface กับ Black Surface",
+        "ถ้าไม่สลับ ให้หมุนน็อตปรับความไวจนไฟบนโมดูลเปลี่ยนตอนข้ามเส้นพอดี"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "08",
+      "base": 5,
+      "group": "eng",
+      "th": "เซนเซอร์สนามแม่เหล็ก",
+      "how": "อาศัยปรากฏการณ์ฮอลล์ เมื่อมีกระแสไหลผ่านแผ่นสารกึ่งตัวนำและมีสนามแม่เหล็กมาตัด จะเกิดแรงดันขึ้นที่ด้านข้างของแผ่น ชิปขยายและเปรียบเทียบแรงดันนี้ แล้วส่งออกเป็นสัญญาณดิจิทัลว่ามีแม่เหล็กอยู่ใกล้หรือไม่ ไม่ได้บอกว่าใกล้แค่ไหน",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์สนามแม่เหล็ก · แม่เหล็กถาวร",
+      "warn": "ชิปตอบสนองต่อขั้วแม่เหล็กด้านเดียว ถ้าเอาเข้าใกล้แล้วไม่มีอะไรเกิดขึ้น ให้กลับด้านแม่เหล็กก่อนแล้วลองใหม่",
+      "pins": [
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "สัญญาณดิจิทัล",
+          "เซนเซอร์สนามแม่เหล็ก"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์สนามแม่เหล็ก"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์สนามแม่เหล็ก"
+        ],
+        [
+          "SDA",
+          "A4",
+          "other",
+          "สายข้อมูล",
+          "จอแสดงผล"
+        ],
+        [
+          "SCL",
+          "A5",
+          "other",
+          "สายจังหวะ",
+          "จอแสดงผล"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟให้จอ",
+          "จอแสดงผล"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "จอแสดงผล"
+        ]
+      ],
+      "result": "จอบรรทัดบนขึ้น Hall: ตามด้วย 0 หรือ 1 บรรทัดล่างขึ้น Magnet Found หรือ No Magnet อัปเดตทุก 0.15 วินาที นำแม่เหล็กเข้าใกล้ราว 1–2 เซนติเมตรข้อความจะเปลี่ยนทันที ถ้าขึ้นกลับด้านให้สลับเงื่อนไข LOW กับ HIGH ในโค้ด",
+      "next": "ติดแม่เหล็กบนล้อจักรยานหนึ่งก้อน แล้วนับว่าล้อหมุนครบกี่รอบในหนึ่งนาที",
+      "job": "มาตรวัดความเร็วรถจักรยาน เซนเซอร์นับรอบมอเตอร์ ระบบตรวจว่าฝาครอบเครื่องจักรปิดสนิทหรือยัง",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n\nconst int PIN_HALL = 2;\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n\n  Serial.begin(9600);\n\n  lcd.init();\n  lcd.backlight();\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Magnetic Sensor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  int hallValue = digitalRead(PIN_HALL);\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Hall: \");\n  lcd.print(hallValue);\n  lcd.print(\"          \");\n\n  lcd.setCursor(0, 1);\n\n  if (hallValue == LOW) {\n    Serial.println(\"พบแม่เหล็ก\");\n    lcd.print(\"Magnet Found    \");\n  } else {\n    Serial.println(\"ไม่พบแม่เหล็ก\");\n    lcd.print(\"No Magnet       \");\n  }\n\n  delay(150);\n}",
+      "fun": {
+        "title": "เครื่องวัดรอบ",
+        "desc": "ติดแม่เหล็กบนล้อแล้วหมุน เครื่องนับรอบและคำนวณเป็นรอบต่อนาทีให้ทุก 3 วินาที เหมือนมาตรวัดความเร็วรถจริง",
+        "parts": "บัซเซอร์",
+        "code": "const int PIN_HALL = 2;\nconst int BUZZER   = 8;\nconst int LED      = 13;\n\nint  turns = 0;\nbool near  = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"เอาแม่เหล็กผ่านหน้าเซนเซอร์ซ้ำ ๆ แล้วดูรอบต่อนาที\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอแม่เหล็ก\n\n  if (found && !near) {                          // เพิ่งผ่านมา นับ 1 รอบ\n    turns++;\n    digitalWrite(LED, HIGH);\n    beep(2200, 30);\n    digitalWrite(LED, LOW);\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปทุก 3 วินาที\n    int rpm = turns * 20;                        // 3 วินาที x 20 = 1 นาที\n    Serial.print(\"นับได้ \");\n    Serial.print(turns);\n    Serial.print(\" รอบ ใน 3 วินาที  =  \");\n    Serial.print(rpm);\n    Serial.println(\" รอบต่อนาที\");\n    turns = 0;\n    lastReport = millis();\n  }\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "lcd": {
+        "title": "ทดสอบขั้วแม่เหล็ก + วัดรอบ",
+        "desc": "เอาแม่เหล็กขั้ว N และ S มาลองสลับกัน จะพบว่าติดแค่ขั้วเดียว ถ้ายังไม่ติดเลยจอจะขึ้น Flip magnet? ให้ลองกลับด้าน พอติดแล้วจะเปลี่ยนเป็นเครื่องวัดรอบต่อนาที",
+        "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
+        "code": "// สองอย่างในตัวเดียว : ทดสอบขั้วแม่เหล็ก N/S + เครื่องวัดรอบ\n// ชิปในเซนเซอร์ตอบสนองขั้วเดียวเท่านั้น เอาอีกขั้วมาจะไม่ติดเลย\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int PIN_HALL = 2;\nconst int BUZZER   = 8;\n\nint  turns = 0;\nint  totalHits = 0;\nbool near = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  lcd.init();\n  lcd.backlight();\n\n  lcd.print(\"Magnet Tester\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Try both poles!\");\n  delay(2500);\n  lcd.clear();\n  lcd.print(\"Waiting magnet\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอขั้วที่ถูก\n\n  if (found && !near) {                          // เพิ่งผ่านเข้ามา\n    turns++;\n    totalHits++;\n    tone(BUZZER, 2200, 30);\n    lcd.setCursor(0, 0);\n    lcd.print(\"FOUND! pole OK  \");\n  }\n  if (!found && near) {\n    lcd.setCursor(0, 0);\n    lcd.print(\"No magnet       \");\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปรอบทุก 3 วินาที\n    lcd.setCursor(0, 1);\n    if (totalHits == 0) {\n      lcd.print(\"Flip magnet? \");                // ยังไม่เคยติดเลย แนะให้กลับขั้ว\n      lcd.print(\"   \");\n    } else {\n      int rpm = turns * 20;                      // 3 วินาที x 20 = 1 นาที\n      lcd.print(\"RPM \");\n      lcd.print(rpm);\n      lcd.print(\"        \");\n    }\n    turns = 0;\n    lastReport = millis();\n  }\n}"
+      },
+      "en": "Magnetic Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
+        "นำแม่เหล็กเข้าใกล้เซนเซอร์ราว 1–2 ซม. ดูจอเปลี่ยนเป็น Magnet Found",
+        "เอาแม่เหล็กออก จอกลับเป็น No Magnet",
+        "กลับขั้วแม่เหล็กแล้วลองใหม่ จะพบว่าตรวจเจอแค่ขั้วเดียว",
+        "ค่อย ๆ ถอยแม่เหล็กออก วัดว่าไกลสุดกี่เซนติเมตรที่ยังตรวจเจอ"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "09",
+      "base": 5,
+      "group": "eng",
+      "th": "โมดูลเลเซอร์",
+      "how": "ไดโอดเลเซอร์เปล่งลำแสงที่มีความยาวคลื่นเดียวและขนานกันมาก จึงเดินทางเป็นเส้นตรงได้ไกลโดยไม่บานออก เมื่อเล็งเข้าหาตัวรับแสงอีกฝั่ง จะกลายเป็นลำแสงที่รู้ได้ทันทีว่ามีอะไรมาบังหรือไม่ จากค่าแสงที่ตัวรับอ่านได้",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเลเซอร์ · โมดูลรับแสงเลเซอร์ (ถ้ามี)",
+      "warn": "ห้ามส่องเข้าตาตนเองหรือผู้อื่นโดยเด็ดขาด ให้ยิงลงพื้นหรือเข้าหาตัวรับเท่านั้น",
+      "pins": [
+        [
+          "S / OUT",
+          "D9",
+          "dig",
+          "สั่งเปิดปิดลำแสง",
+          "โมดูลเลเซอร์"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "โมดูลเลเซอร์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "โมดูลเลเซอร์"
+        ],
+        [
+          "S / OUT",
+          "A0",
+          "ana",
+          "ค่าความแรงของแสงที่รับได้",
+          "ตัวรับแสง"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "ตัวรับแสง"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "ตัวรับแสง"
+        ],
+        [
+          "S / OUT",
+          "D8",
+          "dig",
+          "ขาสั่งให้ดัง",
+          "บัซเซอร์"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "บัซเซอร์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "บัซเซอร์"
+        ]
+      ],
+      "result": "เห็นจุดแดงบนตัวรับ Serial Monitor ขึ้น Receiver A0 = ตามด้วยตัวเลขทุก 0.1 วินาที เอามือบังลำแสงค่าจะเปลี่ยนและบัซเซอร์ดังที่ 2000 เฮิรตซ์ ถ้าดังตอนไม่ได้บังหรือเงียบตอนบัง ให้แก้เลข threshold ในโค้ดจาก 50 ขึ้นหรือลง",
+      "next": "เพิ่มตัวนับในโค้ด นับว่ามีคนเดินผ่านลำแสงกี่ครั้งในหนึ่งคาบ ทำเป็นเครื่องนับคนเข้าออกประตู",
+      "job": "ม่านแสงนิรภัยหน้าเครื่องจักรที่หยุดเครื่องเมื่อมีมือยื่นเข้าไป เครื่องนับชิ้นงานบนสายพาน ประตูลิฟต์ที่เปิดค้างเมื่อมีคนขวาง",
+      "code": "#define LASER_PIN    9\n#define RECEIVER_AO  A0\n#define BUZZER_PIN   8\n\nint threshold = 50;\nunsigned long lastPrint = 0;\n\nvoid setup() {\n  pinMode(LASER_PIN, OUTPUT);\n  pinMode(BUZZER_PIN, OUTPUT);\n  Serial.begin(9600);\n\n  digitalWrite(LASER_PIN, HIGH);   // เปิดลำแสงค้างไว้\n  noTone(BUZZER_PIN);\n}\n\nvoid loop() {\n  int val = analogRead(RECEIVER_AO);   // อ่านทุกรอบ ไม่หน่วง\n\n  if (val > threshold) {\n    tone(BUZZER_PIN, 2000);\n  } else {\n    noTone(BUZZER_PIN);\n  }\n\n  if (millis() - lastPrint >= 100) {   // print แค่ทุก 100ms พอ ไม่ให้ Serial ถ่วง loop\n    Serial.print(\"Receiver A0 = \");\n    Serial.println(val);\n    lastPrint = millis();\n  }\n}",
+      "en": "Laser Module",
+      "steps": [
+        "ต่อสายตามตารางด้านบน ห้ามส่องลำแสงเข้าตาตัวเองหรือเพื่อนเด็ดขาด ให้เล็งเข้าหาตัวรับเท่านั้น",
+        "อัปโหลดโค้ด แล้วเปิด Serial Monitor ที่ 9600",
+        "เล็งจุดแดงให้ตรงกลางตัวรับ จดค่า Receiver A0 ตอนไม่มีอะไรบัง",
+        "เอามือบังลำแสง ดูค่าเปลี่ยนและบัซเซอร์ดัง",
+        "ถ้าเสียงดังสลับกับที่ควรเป็น ให้แก้เลข threshold ในโค้ดจาก 50 ขึ้นหรือลง"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "10",
+      "base": 4,
+      "group": "eng",
+      "th": "เซนเซอร์วัดระยะอัลตราโซนิก",
+      "how": "ส่งคลื่นเสียงความถี่สูงที่หูคนไม่ได้ยินออกไปกระทบวัตถุแล้วสะท้อนกลับ โปรแกรมจับเวลาไปกลับของคลื่น คูณด้วยความเร็วเสียงราว 343 เมตรต่อวินาที แล้วหารสองเพราะเป็นระยะไปกลับ ก็จะได้ระยะห่างจริง",
+      "parts": "บอร์ด Arduino Uno R3 · เซนเซอร์อัลตราโซนิก · สายจัมเปอร์ 4 เส้น",
+      "warn": "สเปกบอก 2–400 ซม. แต่ในห้องจริงเชื่อถือได้ราว 2–200 ซม. วัตถุนุ่มอย่างผ้าหรือฟองน้ำสะท้อนคลื่นไม่ดี ค่าจะเพี้ยนหรือขึ้น Out of range",
+      "pins": [
+        [
+          "TRIG",
+          "D9",
+          "dig",
+          "สั่งปล่อยคลื่นเสียง",
+          "เซนเซอร์วัดระยะอัลตราโซนิก"
+        ],
+        [
+          "ECHO",
+          "D10",
+          "dig",
+          "รับสัญญาณสะท้อนกลับ",
+          "เซนเซอร์วัดระยะอัลตราโซนิก"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์วัดระยะอัลตราโซนิก"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์วัดระยะอัลตราโซนิก"
+        ],
+        [
+          "SDA",
+          "A4",
+          "other",
+          "สายข้อมูล",
+          "จอแสดงผล"
+        ],
+        [
+          "SCL",
+          "A5",
+          "other",
+          "สายจังหวะ",
+          "จอแสดงผล"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟให้จอ",
+          "จอแสดงผล"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "จอแสดงผล"
+        ]
+      ],
+      "result": "จอขึ้น Dist ตามด้วยเลขเซนติเมตร ไกลกว่า 50 ซม. ขึ้น SAFE ระหว่าง 10–50 ซม. ขึ้นแถบทึบที่ยาวขึ้นและกะพริบถี่ขึ้นเมื่อเข้าใกล้ ใกล้กว่า 10 ซม. ขึ้น STOP! ถ้าจับสัญญาณสะท้อนไม่ได้จะขึ้น Out of range",
+      "next": "วัดเทียบไม้บรรทัดจริงที่ระยะ 10, 30 และ 50 ซม. จดว่าคลาดเคลื่อนกี่เซนติเมตรในแต่ละระยะ",
+      "job": "เซนเซอร์ถอยหลังในรถยนต์ หุ่นยนต์หลบสิ่งกีดขวาง เครื่องวัดระดับน้ำในถังโดยไม่ต้องจุ่มลงน้ำ",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\nconst int TRIG = 9, ECHO = 10;\nvoid setup() {\n  pinMode(TRIG, OUTPUT); pinMode(ECHO, INPUT);\n  lcd.init(); lcd.backlight();\n  lcd.print(\"Parking Sensor\");\n  delay(1500);\n  lcd.clear();\n}\nvoid loop() {\n  float cm = readDistance();\n  lcd.setCursor(0, 0);\n  if (cm <= 0) {\n    lcd.print(\"Out of range    \");\n    lcd.setCursor(0, 1); lcd.print(\"                \");\n    delay(250);\n    return;\n  }\n  lcd.print(\"Dist \");\n  lcd.print(cm, 0);\n  lcd.print(\" cm      \");\n  lcd.setCursor(0, 1);\n  if (cm > 50) {\n    lcd.print(\"SAFE            \");\n    delay(200);\n  } else if (cm > 10) {\n    int bars = map((long)cm, 10, 50, 16, 1);     // ใกล้ = แถบยาว\n    for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n    delay(map((long)cm, 10, 50, 60, 500));\n  } else {\n    lcd.print(\">>>  STOP!  <<<<\");\n    delay(450);\n  }\n}\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}",
+      "fun": {
+        "title": "เซนเซอร์ถอยรถ",
+        "desc": "ยิ่งเข้าใกล้บัซเซอร์ยิ่งบี๊บถี่ขึ้น ใกล้กว่า 10 ซม. จะดังยาวเตือนให้หยุด เหมือนระบบช่วยจอดในรถยนต์",
+        "parts": "บัซเซอร์",
+        "code": "const int TRIG = 9, ECHO = 10;\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nvoid setup() {\n  pinMode(TRIG, OUTPUT);\n  pinMode(ECHO, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"เลื่อนมือเข้าออกหน้าเซนเซอร์\");\n}\n\nvoid loop() {\n  float cm = readDistance();\n\n  if (cm <= 0) {                       // วัดไม่ได้ ข้ามรอบนี้\n    Serial.println(\"วัดไม่ได้\");\n    delay(200);\n    return;\n  }\n\n  Serial.print(cm, 0);\n  Serial.print(\" ซม.  \");\n\n  if (cm > 50) {                       // ไกล ปลอดภัย ไม่ต้องเตือน\n    Serial.println(\"ปลอดภัย\");\n    digitalWrite(LED, LOW);\n    delay(200);\n  } else if (cm > 10) {                // ใกล้ขึ้น บี๊บถี่ขึ้นเรื่อย ๆ\n    Serial.println(\"ระวัง\");\n    digitalWrite(LED, HIGH);\n    beep(1500, 60);\n    digitalWrite(LED, LOW);\n    delay(map((long)cm, 10, 50, 40, 500));   // ยิ่งใกล้ ยิ่งหน่วงสั้น\n  } else {                             // ใกล้มาก ดังยาว\n    Serial.println(\">> ใกล้มาก หยุด! <<\");\n    digitalWrite(LED, HIGH);\n    beep(2500, 400);\n    digitalWrite(LED, LOW);\n    delay(60);\n  }\n}\n\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);       // รอไม่เกิน 30 มิลลิวินาที\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "lcd": {
+        "title": "จอถอยรถพร้อมแถบเตือน",
+        "desc": "จอโชว์ระยะเป็นเซนติเมตร แถบล่างยาวขึ้นเมื่อเข้าใกล้ ใกล้กว่า 10 ซม. ขึ้น STOP! เต็มบรรทัด",
+        "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
+        "code": "// จอแสดงผล โชว์ระยะเป็นเซนติเมตร + แถบเตือน ยิ่งใกล้ยิ่งบี๊บถี่\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int TRIG = 9, ECHO = 10;\nconst int BUZZER = 8;\n\nvoid setup() {\n  pinMode(TRIG, OUTPUT); pinMode(ECHO, INPUT); pinMode(BUZZER, OUTPUT);\n  lcd.init(); lcd.backlight();\n  lcd.print(\"Parking Sensor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  float cm = readDistance();\n\n  lcd.setCursor(0, 0);\n  if (cm <= 0) {\n    lcd.print(\"Out of range    \");\n    lcd.setCursor(0, 1); lcd.print(\"                \");\n    delay(250);\n    return;\n  }\n\n  lcd.print(\"Dist \");\n  lcd.print(cm, 0);\n  lcd.print(\" cm      \");\n\n  lcd.setCursor(0, 1);\n  if (cm > 50) {\n    lcd.print(\"SAFE            \");\n    delay(200);\n  } else if (cm > 10) {\n    int bars = map((long)cm, 10, 50, 16, 1);     // ใกล้ = แถบยาว\n    for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n    tone(BUZZER, 1500, 60);\n    delay(map((long)cm, 10, 50, 60, 500));       // ใกล้ = บี๊บถี่\n  } else {\n    lcd.print(\">>>  STOP!  <<<<\");\n    tone(BUZZER, 2500, 400);\n    delay(450);\n  }\n}\n\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}"
+      },
+      "en": "Ultrasonic Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
+        "วางไม้บรรทัดหน้าเซนเซอร์ วัดที่ระยะ 10, 30 และ 50 ซม. จดค่าบนจอเทียบกับของจริง",
+        "เลื่อนฝ่ามือเข้าใกล้ช้า ๆ ดูแถบบนจอยาวขึ้นและกะพริบถี่ขึ้น",
+        "เข้าใกล้กว่า 10 ซม. จอจะขึ้น STOP!",
+        "ลองวัดผ้าหรือฟองน้ำเทียบกับกระดาษแข็ง ดูว่าค่าต่างกันไหม"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "11",
+      "base": 6,
+      "group": "saf",
+      "th": "เซนเซอร์ตรวจจับเปลวไฟ",
+      "how": "ใช้โฟโตไดโอดที่ไวต่อแสงอินฟราเรดช่วง 760–1100 นาโนเมตร ซึ่งเป็นช่วงที่เปลวไฟแผ่ออกมามากเป็นพิเศษ โมดูลให้ผลออกมาสองทางคือขา AO บอกความแรงเป็นตัวเลข และขา DO บอกแค่ว่าเกินเกณฑ์ที่ตั้งด้วยน็อตแล้วหรือยัง",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเปลวไฟ · บัซเซอร์ · ไฟแช็กหรือเทียน",
+      "warn": "ต้องมีครูควบคุมขณะจุดไฟ ทดลองห่างเซนเซอร์ 20–30 เซนติเมตร และเตรียมผ้าชุบน้ำไว้ใกล้ตัว",
+      "pins": [
+        [
+          "DO",
+          "D2",
+          "dig",
+          "สัญญาณเตือนเมื่อเจอเปลวไฟ",
+          "เซนเซอร์ตรวจจับเปลวไฟ"
+        ],
+        [
+          "AO",
+          "A0",
+          "ana",
+          "ระดับความแรงของเปลวไฟ",
+          "เซนเซอร์ตรวจจับเปลวไฟ"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์ตรวจจับเปลวไฟ"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์ตรวจจับเปลวไฟ"
+        ],
+        [
+          "S / OUT",
+          "D8",
+          "dig",
+          "ขาสั่งให้ดัง",
+          "บัซเซอร์"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "บัซเซอร์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "บัซเซอร์"
+        ]
+      ],
+      "result": "จุดไฟแช็กห่างราว 20–30 เซนติเมตร บัซเซอร์จะดังเป็นจังหวะสั้น ๆ ทันที เอาไฟออกเสียงหยุด ถ้าไม่ดังให้หมุนน็อตปรับความไวจนไฟดวงที่สองบนโมดูลเพิ่งจะติดตอนมีไฟ โปรแกรมนี้อ่านเฉพาะขา DO ยังไม่ได้ใช้ค่าจากขา AO",
+      "next": "เพิ่ม analogRead ที่ขา AO แล้วแสดงตัวเลขออกมา จะได้รู้ว่าไฟแรงแค่ไหน ไม่ใช่แค่มีหรือไม่มี",
+      "job": "ระบบแจ้งเตือนไฟไหม้ในอาคาร หุ่นยนต์ดับเพลิงในการแข่งขัน เซนเซอร์เฝ้าหัวเตาในครัว",
+      "code": "#define FLAME_PIN  2\n#define BUZZER_PIN 8\n\nint val = 0;\n\nvoid setup() {\n  pinMode(FLAME_PIN, INPUT);\n  pinMode(BUZZER_PIN, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  val = digitalRead(FLAME_PIN);\n\n  if (val == LOW) {   // เจอไฟ\n    tone(BUZZER_PIN, 2000);\n    delay(100);\n    noTone(BUZZER_PIN);\n    delay(100);\n  }\n  else {\n    noTone(BUZZER_PIN);\n  }\n}",
+      "en": "Flame Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน ให้ครูเป็นคนจุดไฟ และเตรียมผ้าชุบน้ำไว้ใกล้ตัวก่อนเริ่ม",
+        "อัปโหลดโค้ดลงบอร์ด",
+        "จุดไฟแช็กห่างเซนเซอร์ราว 20–30 ซม. ฟังเสียงบัซเซอร์ดังเป็นจังหวะ",
+        "เอาไฟออก เสียงต้องหยุดทันที",
+        "ถ้าไม่ดัง ให้หมุนน็อตปรับความไวจนไฟดวงที่สองบนโมดูลเพิ่งจะติดตอนมีไฟ",
+        "ค่อย ๆ ถอยไฟออก วัดว่าไกลสุดกี่เซนติเมตรที่ยังตรวจเจอ"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "12",
+      "base": 6,
+      "group": "saf",
+      "th": "เซนเซอร์ตรวจจับการสั่นสะเทือน",
+      "how": "ภายในหลอดโลหะมีสปริงกับแกนตัวนำวางเกือบชนกัน เมื่ออยู่นิ่งสถานะจะคงที่ แต่เมื่อถูกเขย่าหรือกระแทก สปริงจะแกว่งจนสัมผัสเปลี่ยนไปมาชั่วขณะ โปรแกรมจับจังหวะที่สถานะเปลี่ยนนี้แล้วนับเป็นการสั่นหนึ่งครั้ง",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์สั่นสะเทือน · สายจัมเปอร์ 3 เส้น",
+      "warn": "หมุนน็อตปรับความไวจนไฟบนโมดูลดับตอนวางนิ่ง ถ้าไวเกินไปจะนับซ้ำรัว ๆ",
+      "pins": [
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "สัญญาณดิจิทัล",
+          "เซนเซอร์ตรวจจับการสั่นสะเทือน"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์ตรวจจับการสั่นสะเทือน"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์ตรวจจับการสั่นสะเทือน"
+        ],
+        [
+          "S / OUT",
+          "D9",
+          "dig",
+          "ขาสั่งให้ติด",
+          "โมดูลไฟ LED"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "โมดูลไฟ LED"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "โมดูลไฟ LED"
+        ]
+      ],
+      "result": "เขย่าโมดูลหรือเคาะโต๊ะเบา ๆ ไฟบนโมดูลจะติด 0.3 วินาที และ Serial Monitor ขึ้นว่าตรวจพบการสั่นครั้งที่เท่าไร วางนิ่ง ๆ แล้วตัวเลขต้องไม่เพิ่มเอง ถ้าเพิ่มเองเรื่อย ๆ ให้หมุนน็อตลดความไวลง",
+      "next": "เพิ่มบัซเซอร์ให้ร้องเมื่อนับได้เกิน 3 ครั้งติดกัน ทำเป็นสัญญาณกันขโมยอย่างง่าย",
+      "job": "สัญญาณกันขโมยรถจักรยานยนต์ เซนเซอร์แจ้งว่าพัสดุถูกกระแทกระหว่างขนส่ง ระบบเฝ้าระวังการสั่นผิดปกติของเครื่องจักร",
+      "code": "const int PIN_SHOCK = 2;\nconst int PIN_LED   = 9;\nint  alarms = 0;\nbool lastState;\n\nvoid setup() {\n  pinMode(PIN_SHOCK, INPUT_PULLUP);       // กันขาลอย ไม่ให้นับผีหลอก\n  pinMode(PIN_LED, OUTPUT);\n  Serial.begin(9600);\n\n  delay(1000);                            // รอให้นิ่งก่อนจำสถานะเริ่มต้น\n  lastState = digitalRead(PIN_SHOCK);\n  Serial.println(\"ลองเขย่าดู\");\n}\n\nvoid loop() {\n  bool now = digitalRead(PIN_SHOCK);\n\n  if (now != lastState) {                 // สถานะเปลี่ยน = มีการสั่น\n    alarms++;\n    Serial.print(\"!! ตรวจพบการสั่น ครั้งที่ \");\n    Serial.print(alarms);\n    Serial.println(\" !!\");\n\n    digitalWrite(PIN_LED, HIGH);\n\n    delay(300);                           // หน่วงกันนับซ้ำจากการสั่นค้าง\n    digitalWrite(PIN_LED, LOW);\n\n    lastState = digitalRead(PIN_SHOCK);\n    return;\n  }\n  lastState = now;\n}",
+      "fun": {
+        "title": "สัญญาณกันขโมยรถ",
+        "desc": "เขย่าหรือกระแทกแล้วไซเรนขึ้นลงดัง 3 วินาที พร้อมนับจำนวนครั้งที่ถูกรบกวน",
+        "parts": "บัซเซอร์",
+        "code": "const int PIN_SHOCK = 2;\nconst int BUZZER    = 8;\nconst int LED       = 13;\n\nint  alarms = 0;\nbool lastState;\n\nvoid setup() {\n  pinMode(PIN_SHOCK, INPUT_PULLUP);       // กันขาลอย ไม่ให้นับผีหลอก\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  delay(1000);                            // รอให้นิ่งก่อนจำสถานะเริ่มต้น\n  lastState = digitalRead(PIN_SHOCK);\n  Serial.println(\"ระบบกันขโมยพร้อม ลองเขย่าดู\");\n}\n\nvoid loop() {\n  bool now = digitalRead(PIN_SHOCK);\n\n  if (now != lastState) {                 // สถานะเปลี่ยน = มีการสั่น\n    alarms++;\n    Serial.print(\"!! ตรวจพบการสั่น ครั้งที่ \");\n    Serial.print(alarms);\n    Serial.println(\" !!\");\n    siren();\n    delay(300);                           // หน่วงกันนับซ้ำจากการสั่นค้าง\n    lastState = digitalRead(PIN_SHOCK);\n    return;\n  }\n  lastState = now;\n}\n\nvoid siren() {                            // เสียงไซเรนขึ้นลง 3 วินาที\n  unsigned long start = millis();\n  while (millis() - start < 3000) {\n    digitalWrite(LED, HIGH);\n    for (int f = 800; f < 2000; f += 60) { tone(BUZZER, f); delay(8); }\n    digitalWrite(LED, LOW);\n    for (int f = 2000; f > 800; f -= 60) { tone(BUZZER, f); delay(8); }\n  }\n  noTone(BUZZER);\n  digitalWrite(LED, LOW);\n  Serial.println(\"ไซเรนหยุด กลับสู่โหมดเฝ้าระวัง\");\n}"
+      },
+      "en": "Shock Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน อัปโหลดโค้ด แล้วเปิด Serial Monitor ที่ 9600",
+        "วางโมดูลนิ่ง ๆ 10 วินาที ตัวเลขต้องไม่เพิ่มเอง ถ้าเพิ่มให้หมุนน็อตลดความไวลง",
+        "เคาะโต๊ะเบา ๆ ดูไฟบนโมดูลติดและตัวเลขเพิ่มขึ้นทีละ 1",
+        "ลองเขย่าโมดูลเบา ๆ เทียบกับเขย่าแรง ๆ ว่าไวต่างกันไหม",
+        "เคาะให้ครบ 10 ครั้งช้า ๆ แล้วดูว่าโปรแกรมนับได้ครบไหม"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "13",
+      "base": 7,
+      "group": "saf",
+      "th": "เซนเซอร์เสียงเล็ก",
+      "how": "ไมโครโฟนแบบคอนเดนเซอร์เปลี่ยนคลื่นเสียงเป็นแรงดันไฟฟ้าขนาดเล็กมาก โมดูลจึงมีวงจรขยายและวงจรเปรียบเทียบที่ปรับเกณฑ์ได้ด้วยน็อต ให้ผลสองทางคือขา AO บอกระดับเสียง และขา DO ที่เปลี่ยนสถานะเมื่อเสียงดังเกินเกณฑ์",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์เสียง · สายจัมเปอร์ 4 เส้น",
+      "warn": "ปรับน็อตจนไฟดวงที่สองบนโมดูลเพิ่งจะดับตอนเงียบ แล้วค่อยทดลองปรบมือ",
+      "pins": [
+        [
+          "DO",
+          "D2",
+          "dig",
+          "สัญญาณเมื่อเสียงเกินเกณฑ์",
+          "เซนเซอร์เสียงเล็ก"
+        ],
+        [
+          "AO",
+          "A0",
+          "ana",
+          "ระดับเสียงแบบต่อเนื่อง",
+          "เซนเซอร์เสียงเล็ก"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์เสียงเล็ก"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์เสียงเล็ก"
+        ],
+        [
+          "S / OUT",
+          "D9",
+          "dig",
+          "ขาสั่งให้ติด",
+          "โมดูลไฟ LED"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "โมดูลไฟ LED"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "โมดูลไฟ LED"
+        ]
+      ],
+      "result": "ปรบมือหนึ่งครั้ง ไฟบนโมดูลไฟ LED ติด ปรบอีกครั้งดับ Serial Monitor ขึ้นว่าเปิดไฟหรือปิดไฟ โปรแกรมเว้น 500 มิลลิวินาทีกันนับซ้ำจากเสียงก้อง ถ้าปรบแล้วไม่ตอบสนอง ให้หมุนน็อตจนไฟดวงที่สองบนโมดูลเพิ่งจะดับตอนเงียบ",
+      "next": "เปลี่ยนจากโมดูลไฟ LED เป็นรีเลย์ ทำสวิตช์ไฟปรบมือที่ใช้กับหลอดไฟจริงได้",
+      "job": "สวิตช์ไฟสั่งงานด้วยเสียง ไฟทางเดินที่ติดเมื่อได้ยินเสียงคน ของเล่นที่ตอบสนองเสียงปรบมือ",
+      "code": "const int PIN_D  = 2;\nconst int LED    = 9;\n\nbool lampOn = false;\nbool lastState = LOW;\nunsigned long lastClap = 0;\n\nvoid setup() {\n  pinMode(PIN_D, INPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"ปรบมือหนึ่งครั้งเพื่อเปิดหรือปิดไฟ\");\n}\n\nvoid loop() {\n  bool state = digitalRead(PIN_D);\n\n  // จับเฉพาะจังหวะที่เพิ่งเปลี่ยนจาก LOW เป็น HIGH (ขอบขาขึ้น)\n  // ไม่ใช่แค่ตัวจับเวลา เพื่อไม่ให้สลับไฟรัวตอนมีเสียงดังค้างนาน\n  if (state == HIGH && lastState == LOW && millis() - lastClap > 500) {\n    lastClap = millis();\n    lampOn = !lampOn;\n    digitalWrite(LED, lampOn);\n\n    if (lampOn) {\n      Serial.println(\"ปรบมือ -> เปิดไฟ\");\n    } else {\n      Serial.println(\"ปรบมือ -> ปิดไฟ\");\n    }\n  }\n  lastState = state;\n}",
+      "fun": {
+        "title": "สวิตช์ปรบมือ",
+        "desc": "ปรบมือหนึ่งครั้งเปิดไฟ ปรบอีกครั้งปิด มีเสียงตอบรับต่างกัน เสียงสูงขึ้นคือเปิด เสียงต่ำลงคือปิด",
+        "parts": "บัซเซอร์",
+        "code": "const int PIN_D  = 2;\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nbool lampOn = false;\nunsigned long lastClap = 0;\n\nvoid setup() {\n  pinMode(PIN_D, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"ปรบมือหนึ่งครั้งเพื่อเปิดหรือปิดไฟ\");\n}\n\nvoid loop() {\n  if (digitalRead(PIN_D) == HIGH && millis() - lastClap > 500) {\n    lastClap = millis();                  // หน่วง 0.5 วิ กันเสียงสะท้อนนับซ้ำ\n    lampOn = !lampOn;\n    digitalWrite(LED, lampOn);\n\n    if (lampOn) {\n      Serial.println(\"ปรบมือ -> เปิดไฟ\");\n      beep(1200, 80); beep(1800, 120);    // เสียงสูงขึ้น = เปิด\n    } else {\n      Serial.println(\"ปรบมือ -> ปิดไฟ\");\n      beep(1800, 80); beep(1000, 120);    // เสียงต่ำลง = ปิด\n    }\n  }\n}\n\nvoid beep(int freq, int ms) {\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "en": "Small Sound Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน อัปโหลดโค้ด แล้วเปิด Serial Monitor ที่ 9600",
+        "หมุนน็อตบนโมดูลจนไฟดวงที่สองเพิ่งจะดับตอนห้องเงียบ",
+        "ปรบมือหนึ่งครั้ง ไฟบนโมดูลไฟ LED จะติด",
+        "ปรบอีกครั้ง ไฟจะดับ",
+        "ลองปรบเบาลงเรื่อย ๆ ดูว่าต้องดังแค่ไหนถึงจะตอบสนอง"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "14",
+      "base": 7,
+      "group": "agr",
+      "th": "เซนเซอร์เสียงใหญ่",
+      "how": "หลักการเดียวกับเซนเซอร์เสียงเล็ก แต่ไมโครโฟนหน้ากว้างกว่าและวงจรขยายแรงกว่า จึงรับเสียงเบาและเสียงไกลได้ดีกว่า โปรแกรมไม่ได้อ่านค่าเดียวแล้วตัดสิน แต่เก็บค่าสูงสุดในช่วงเวลาสั้น ๆ ก่อน จึงจับเสียงปรบมือที่ดังแวบเดียวได้แม่นกว่า",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์เสียงใหญ่ · สายจัมเปอร์ 3 เส้น",
+      "warn": "ค่าที่อ่านได้ไม่ใช่เดซิเบลจริง เป็นเพียงตัวเลขเปรียบเทียบระหว่างเสียงดังกับเสียงเบาเท่านั้น จะเอาไปอ้างอิงเป็นหน่วยวัดไม่ได้",
+      "pins": [
+        [
+          "AO",
+          "A0",
+          "ana",
+          "ระดับเสียงแบบต่อเนื่อง",
+          "เซนเซอร์เสียงใหญ่"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์เสียงใหญ่"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์เสียงใหญ่"
+        ],
+        [
+          "S / OUT",
+          "D9",
+          "dig",
+          "ขาสั่งให้ติด",
+          "โมดูลไฟ LED"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "โมดูลไฟ LED"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "โมดูลไฟ LED"
+        ]
+      ],
+      "result": "Serial Monitor ขึ้นว่ารอฟังเสียงปรบมือ พอปรบมือหรือตะโกนจนค่าสูงสุดเกิน 700 จะนับครั้งพร้อมแสดงค่า peak ที่วัดได้ และไฟบนโมดูลไฟ LED ติดแวบหนึ่ง ถ้าห้องเงียบมากหรือดังมาก ให้แก้เลข THRESHOLD ในโค้ด",
+      "next": "จัดแข่งกันตะโกน ดูว่าใครทำค่า peak ได้สูงสุด หรือทำกราฟระดับเสียงด้วย Serial Plotter",
+      "job": "เครื่องนับเสียงในกิจกรรม ระบบเตือนเมื่อห้องเรียนเสียงดังเกิน เครื่องตรวจเสียงผิดปกติของมอเตอร์",
+      "code": "const int PIN_A   = A0;\nconst int PIN_LED = 9;\n\nconst int THRESHOLD = 700;              // ระดับเสียงที่ถือว่าเป็น \"ปรบมือ\"\nconst unsigned long DEBOUNCE = 300;     // กันนับซ้ำจากเสียงค้าง (ms)\n\nint claps = 0;\nunsigned long lastClap = 0;\n\nvoid setup() {\n  pinMode(PIN_LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"รอฟังเสียงปรบมือ...\");\n}\n\nvoid loop() {\n  int peak = 0;\n  unsigned long start = millis();\n  while (millis() - start < 50) {        // เก็บค่าสูงสุดใน 50 ms\n    int v = analogRead(PIN_A);\n    if (v > peak) peak = v;\n  }\n\n  if (peak > THRESHOLD && millis() - lastClap > DEBOUNCE) {\n    claps++;\n    lastClap = millis();\n    Serial.print(\"!! ปรบมือ ครั้งที่ \");\n    Serial.print(claps);\n    Serial.print(\"  (peak = \");\n    Serial.print(peak);\n    Serial.println(\")\");\n\n    digitalWrite(PIN_LED, HIGH);\n    delay(100);\n    digitalWrite(PIN_LED, LOW);\n  }\n}",
+      "fun": {
+        "title": "มาตรวัดเสียงในห้อง",
+        "desc": "วัดระดับพื้นฐานของห้องเองตอนเริ่ม แล้ววาดแถบกราฟตามความดัง ถ้าเกินเกณฑ์จะเตือน ใช้จัดกิจกรรมแข่งกันตะโกนได้",
+        "parts": "บัซเซอร์",
+        "code": "const int PIN_A  = A0;\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nint quiet = 0;              // ค่าตอนห้องเงียบ วัดเองตอนเริ่ม\nint limit = 0;              // เกินเท่านี้ถือว่าดังเกินไป\n\nvoid setup() {\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n\n  Serial.println(\"เงียบ ๆ 3 วินาที กำลังวัดระดับพื้นฐานของห้อง...\");\n  long sum = 0;\n  for (int i = 0; i < 60; i++) { sum += peak(); delay(50); }\n  quiet = sum / 60;\n  limit = quiet + 150;\n  Serial.print(\"ห้องเงียบอยู่ที่ \"); Serial.print(quiet);\n  Serial.print(\"  จะเตือนเมื่อเกิน \"); Serial.println(limit);\n}\n\nvoid loop() {\n  int level = peak();\n  int bars  = map(level, quiet, quiet + 300, 0, 20);\n  bars = constrain(bars, 0, 20);\n\n  Serial.print(level);\n  Serial.print(\"  \");\n  for (int i = 0; i < bars; i++) Serial.print(\"|\");     // แถบกราฟเสียง\n\n  if (level > limit) {\n    Serial.println(\"   << ดังเกินไป!\");\n    digitalWrite(LED, HIGH);\n    beep(2500, 150);\n    digitalWrite(LED, LOW);\n  } else {\n    Serial.println();\n  }\n  delay(150);\n}\n\nint peak() {                             // หาค่าสูงสุดใน 50 มิลลิวินาที\n  int p = 0;\n  unsigned long start = millis();\n  while (millis() - start < 50) {\n    int v = analogRead(PIN_A);\n    if (v > p) p = v;\n  }\n  return p;\n}\n\nvoid beep(int freq, int ms) {\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "lcd": {
+        "title": "แข่งกันตะโกน",
+        "desc": "จอโชว์ระดับเสียงปัจจุบันคู่กับสถิติสูงสุดที่เคยทำได้ ใช้จัดกิจกรรมแข่งกันทั้งกลุ่มได้เลย",
+        "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
+        "code": "// มาตรวัดเสียง จอแสดงผล โชว์แถบกราฟและค่าสูงสุดที่เคยทำได้ แข่งกันตะโกนได้\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int PIN_A  = A0;\nconst int BUZZER = 8;\n\nint quiet = 0, limit = 0, record = 0;\n\nvoid setup() {\n  pinMode(BUZZER, OUTPUT);\n  lcd.init(); lcd.backlight();\n\n  lcd.print(\"Calibrating...\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Keep quiet 3 sec\");\n  long sum = 0;\n  for (int i = 0; i < 60; i++) { sum += peak(); delay(50); }\n  quiet  = sum / 60;\n  limit  = quiet + 150;\n  record = quiet;\n  lcd.clear();\n}\n\nvoid loop() {\n  int level = peak();\n  if (level > record) record = level;             // เก็บสถิติเสียงดังที่สุด\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Now \");  lcd.print(level);   lcd.print(\"    \");\n  lcd.setCursor(9, 0);\n  lcd.print(\"Max \");  lcd.print(record);  lcd.print(\"  \");\n\n  lcd.setCursor(0, 1);\n  int bars = map(level, quiet, quiet + 300, 0, 16);\n  bars = constrain(bars, 0, 16);\n  for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n\n  if (level > limit) tone(BUZZER, 2500, 120);\n  delay(120);\n}\n\nint peak() {                                      // ค่าสูงสุดใน 50 มิลลิวินาที\n  int p = 0;\n  unsigned long start = millis();\n  while (millis() - start < 50) {\n    int v = analogRead(PIN_A);\n    if (v > p) p = v;\n  }\n  return p;\n}"
+      },
+      "en": "Big Sound Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน อัปโหลดโค้ด แล้วเปิด Serial Monitor ที่ 9600",
+        "อยู่เงียบ ๆ สักครู่ ดูว่าค่า peak ตอนไม่มีเสียงอยู่ประมาณเท่าไร",
+        "ปรบมือหรือตะโกน ดูตัวเลข peak ที่โปรแกรมจับได้",
+        "แข่งกันในกลุ่มว่าใครทำค่า peak ได้สูงสุด",
+        "ถ้าไวเกินหรือช้าเกิน ให้แก้เลข THRESHOLD จาก 700 ให้เหมาะกับห้อง"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "15",
+      "base": 8,
+      "group": "saf",
+      "th": "รีดสวิตช์",
+      "how": "ในหลอดแก้วมีแผ่นโลหะบางสองแผ่นวางเกือบชนกัน เมื่อมีแม่เหล็กเข้าใกล้ แผ่นทั้งสองถูกเหนี่ยวนำให้มีขั้วตรงข้ามกันแล้วดูดเข้าหากันจนวงจรต่อถึงกัน พอเอาแม่เหล็กออก แผ่นจะดีดกลับด้วยความยืดหยุ่นของตัวเอง ต่างจากเซนเซอร์ฮอลล์ตรงที่ติดได้ทั้งสองขั้ว",
+      "parts": "บอร์ด Arduino Uno R3 · รีดสวิตช์ · แม่เหล็ก · สายจัมเปอร์",
+      "warn": "ถ้าใช้รีดสวิตช์เปลือยต้องเขียน INPUT_PULLUP เสมอ ไม่เช่นนั้นค่าที่อ่านได้จะแกว่งไม่แน่นอน",
+      "pins": [
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "สัญญาณดิจิทัล อ่านด้วย INPUT_PULLUP",
+          "รีดสวิตช์"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "รีดสวิตช์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "รีดสวิตช์"
+        ],
+        [
+          "S / OUT",
+          "D8",
+          "dig",
+          "ขาสั่งให้ดัง",
+          "บัซเซอร์"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "บัซเซอร์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "บัซเซอร์"
+        ]
+      ],
+      "result": "แม่เหล็กอยู่ใกล้ Serial Monitor ขึ้นว่าประตูปิด ไฟบนบอร์ดขา 13 ดับ พอดึงแม่เหล็กออก ไฟติดและบัซเซอร์ดังค้างที่ 1000 เฮิรตซ์ พร้อมข้อความว่าประตูถูกเปิด โปรแกรมตรวจสถานะทุก 0.3 วินาที",
+      "next": "ติดรีดสวิตช์ที่วงกบและติดแม่เหล็กที่บานประตู ทำระบบแจ้งเตือนประตูเปิดของจริง",
+      "job": "ระบบกันขโมยประตูหน้าต่าง เซนเซอร์ตรวจว่าฝาตู้เย็นปิดสนิท มาตรวัดน้ำที่นับรอบใบพัดด้วยแม่เหล็ก",
+      "code": "const int PIN_REED   = 2;\nconst int PIN_BUZZER = 8;\n\nvoid setup() {\n  pinMode(PIN_REED, INPUT_PULLUP);\n  pinMode(13, OUTPUT);\n  pinMode(PIN_BUZZER, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  if (digitalRead(PIN_REED) == HIGH) {      // สลับจาก LOW เป็น HIGH\n    Serial.println(\"ประตูปิด (แม่เหล็กอยู่ใกล้)\");\n    digitalWrite(13, LOW);\n    noTone(PIN_BUZZER);\n  } else {\n    Serial.println(\"!! ประตูถูกเปิด !!\");\n    digitalWrite(13, HIGH);\n    tone(PIN_BUZZER, 1000);\n  }\n  delay(300);\n}",
+      "fun": {
+        "title": "แจ้งเตือนเปิดประตู",
+        "desc": "ดึงแม่เหล็กออกเมื่อไหร่ ไซเรนดังทันทีพร้อมนับจำนวนครั้งที่ประตูถูกเปิด ใช้ขา AO จึงไม่ต้องหมุนน็อตปรับ",
+        "parts": "บัซเซอร์",
+        "code": "// ใช้ขา AO แทน DO เพื่อไม่ต้องพึ่งการหมุนน็อตบนโมดูล\n\nconst int PIN_A  = A0;\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nint  closedValue = 0;       // ค่าตอนแม่เหล็กอยู่ใกล้ (ประตูปิด)\nbool doorOpen = false;\nint  opens = 0;\n\nvoid setup() {\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n\n  Serial.println(\"เอาแม่เหล็กแนบเซนเซอร์ไว้ (ประตูปิด) รอ 3 วินาที...\");\n  delay(3000);\n  closedValue = analogRead(PIN_A);\n  Serial.print(\"ค่าตอนประตูปิด = \");\n  Serial.println(closedValue);\n  Serial.println(\"พร้อมแล้ว ลองดึงแม่เหล็กออก\");\n}\n\nvoid loop() {\n  int value = analogRead(PIN_A);\n  bool open = (abs(value - closedValue) > 100);   // ต่างจากตอนปิดมาก = ถูกเปิด\n\n  if (open && !doorOpen) {\n    doorOpen = true;\n    opens++;\n    Serial.print(\"!! ประตูถูกเปิด ครั้งที่ \");\n    Serial.print(opens);\n    Serial.println(\" !!\");\n    digitalWrite(LED, HIGH);\n    for (int i = 0; i < 5; i++) { beep(2200, 120); delay(80); }\n  }\n  else if (!open && doorOpen) {\n    doorOpen = false;\n    digitalWrite(LED, LOW);\n    Serial.println(\"ประตูปิดแล้ว\");\n    beep(900, 150);\n  }\n  delay(80);\n}\n\nvoid beep(int freq, int ms) {\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "lcd": {
+        "title": "จอนับจำนวนครั้งเปิดประตู",
+        "desc": "จอโชว์สถานะประตูและจำนวนครั้งที่ถูกเปิด ลองทั้งขั้ว N และ S จะพบว่ารีดสวิตช์ติดทั้งสองขั้ว ต่างจากเซนเซอร์ฮอลล์",
+        "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
+        "code": "// แจ้งเตือนเปิดประตู นับจำนวนครั้ง\n// ลองทั้งขั้ว N และ S จะพบว่ารีดสวิตช์ติดทั้งสองขั้ว ต่างจากเซนเซอร์ฮอลล์\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int PIN_A  = A0;\nconst int BUZZER = 8;\n\nint  closedValue = 0;\nbool doorOpen = false;\nint  opens = 0;\n\nvoid setup() {\n  pinMode(BUZZER, OUTPUT);\n  lcd.init(); lcd.backlight();\n\n  lcd.print(\"Put magnet on\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"sensor... 3 sec\");\n  delay(3000);\n  closedValue = analogRead(PIN_A);           // จำค่าตอนประตูปิด\n  lcd.clear();\n  lcd.print(\"Door CLOSED\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Opened 0 times\");\n}\n\nvoid loop() {\n  int value = analogRead(PIN_A);\n  bool open = (abs(value - closedValue) > 100);\n\n  if (open && !doorOpen) {\n    doorOpen = true;\n    opens++;\n    lcd.setCursor(0, 0);\n    lcd.print(\"** DOOR OPEN **\");\n    lcd.setCursor(0, 1);\n    lcd.print(\"Opened \");\n    lcd.print(opens);\n    lcd.print(\" times   \");\n    for (int i = 0; i < 5; i++) { tone(BUZZER, 2200, 120); delay(200); }\n  }\n  else if (!open && doorOpen) {\n    doorOpen = false;\n    lcd.setCursor(0, 0);\n    lcd.print(\"Door CLOSED    \");\n    tone(BUZZER, 900, 150);\n  }\n  delay(80);\n}"
+      },
+      "en": "Reed Switch",
+      "steps": [
+        "ต่อสายตามตารางด้านบน อัปโหลดโค้ด แล้วเปิด Serial Monitor ที่ 9600",
+        "เอาแม่เหล็กแตะใกล้รีดสวิตช์ ข้อความจะบอกว่าประตูปิด และบัซเซอร์เงียบ",
+        "ดึงแม่เหล็กออก บัซเซอร์ดังทันทีและไฟบนบอร์ดขา 13 ติด",
+        "ลองทั้งขั้ว N และ S จะพบว่าทำงานทั้งสองขั้ว ต่างจากเซนเซอร์สนามแม่เหล็ก",
+        "ค่อย ๆ ถอยแม่เหล็กออก วัดว่าไกลสุดกี่เซนติเมตรที่ยังทำงาน"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "16",
+      "base": 8,
+      "group": "saf",
+      "th": "เซนเซอร์ตรวจการเคาะ",
+      "how": "ภายในมีสปริงและมวลโลหะที่ไวต่อแรงกระแทกเฉียบพลัน เมื่อเคาะที่ตัวโมดูล มวลจะเคลื่อนทำให้หน้าสัมผัสแตะกันเพียงเสี้ยววินาที โปรแกรมใช้อินเตอร์รัปต์คอยดักจังหวะขอบขาลงนี้ จึงไม่พลาดแม้พัลส์จะสั้นมาก ต่างจากเซนเซอร์สั่นที่ตอบสนองต่อการเขย่าต่อเนื่อง",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์ตรวจการเคาะ · สายจัมเปอร์ 3 เส้น",
+      "warn": "เคาะเบา ๆ พอ อย่าทุบแรง โมดูลเสียหายได้ และให้เว้นจังหวะระหว่างเคาะราวครึ่งวินาที",
+      "pins": [
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "สัญญาณดิจิทัล",
+          "เซนเซอร์ตรวจการเคาะ"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "เซนเซอร์ตรวจการเคาะ"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "เซนเซอร์ตรวจการเคาะ"
+        ],
+        [
+          "S / OUT",
+          "D8",
+          "dig",
+          "ขาสั่งให้ดัง",
+          "บัซเซอร์"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "บัซเซอร์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "บัซเซอร์"
+        ]
+      ],
+      "result": "เคาะที่โมดูลหนึ่งครั้ง บัซเซอร์ดังสั้น ๆ 4 จังหวะติดกัน โปรแกรมเว้น 250 มิลลิวินาทีกันนับซ้ำ ดังนั้นเคาะรัวเร็วเกินไปจะได้เสียงชุดเดียว ต้องเว้นจังหวะระหว่างเคาะเล็กน้อย",
+      "next": "แก้โค้ดให้ต้องเคาะครบ 3 ครั้งภายใน 2 วินาทีจึงจะปลดล็อก ทำเป็นระบบล็อกด้วยรหัสเคาะ",
+      "job": "ระบบล็อกด้วยรหัสเคาะ เซนเซอร์แจ้งเตือนการงัดตู้เซฟ อุปกรณ์เคาะฟังเสียงเพื่อหาโพรงในวัสดุ",
+      "code": "const int PIN_TAP = 2;\nconst int BUZZER  = 8;\n\nvolatile bool tapped = false;\nvolatile unsigned long lastTapTime = 0;\n\nvoid setup() {\n  pinMode(PIN_TAP, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  attachInterrupt(digitalPinToInterrupt(PIN_TAP), onTap, FALLING);\n}\n\nvoid onTap() {\n  unsigned long now = millis();\n  if (now - lastTapTime > 250) {\n    tapped = true;\n    lastTapTime = now;\n  }\n}\n\nvoid loop() {\n  if (tapped) {\n    tapped = false;\n\n    for (int i = 0; i < 4; i++) {\n      tone(BUZZER, 2000);\n      delay(100);\n      noTone(BUZZER);\n      delay(100);\n    }\n  }\n}",
+      "fun": {
+        "title": "ล็อกรหัสเคาะ",
+        "desc": "เคาะ 3 ครั้งภายใน 3 วินาทีจึงปลดล็อก สำเร็จจะเล่นเสียงโด-มี-ซอล-โด ถ้าช้าเกินไปต้องเริ่มใหม่",
+        "parts": "บัซเซอร์",
+        "code": "const int PIN_TAP = 2;\nconst int BUZZER  = 8;\nconst int LED     = 13;\n\nconst int CODE_LENGTH = 3;          // ต้องเคาะกี่ครั้งจึงปลดล็อก\nint  knocks = 0;\nbool lastState;\nunsigned long firstKnock = 0;\n\nvoid setup() {\n  pinMode(PIN_TAP, INPUT_PULLUP);   // กันขาลอย ไม่ให้นับผีหลอก\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  delay(1000);                      // รอให้นิ่งก่อนจำสถานะเริ่มต้น\n  lastState = digitalRead(PIN_TAP);\n  Serial.println(\"เคาะ 3 ครั้งใน 3 วินาทีเพื่อปลดล็อก\");\n}\n\nvoid loop() {\n  bool now = digitalRead(PIN_TAP);\n\n  if (now != lastState) {           // ตรวจเฉพาะจังหวะที่สถานะเปลี่ยน\n    if (knocks == 0) firstKnock = millis();\n    knocks++;\n    Serial.print(\"เคาะครั้งที่ \");\n    Serial.println(knocks);\n    beep(1600, 50);\n    delay(250);                     // หน่วงกันนับซ้ำจากการสั่นค้าง\n    lastState = digitalRead(PIN_TAP);\n\n    if (knocks >= CODE_LENGTH) {\n      unlock();\n      knocks = 0;\n    }\n    return;\n  }\n  lastState = now;\n\n  if (knocks > 0 && millis() - firstKnock > 3000) {   // ช้าเกินไป\n    Serial.println(\"ช้าเกินไป เริ่มใหม่\");\n    beep(400, 300);\n    knocks = 0;\n  }\n}\n\nvoid unlock() {\n  Serial.println(\">>> ปลดล็อกสำเร็จ! <<<\");\n  digitalWrite(LED, HIGH);\n  beep(1046, 120);   // โด\n  beep(1318, 120);   // มี\n  beep(1568, 120);   // ซอล\n  beep(2093, 300);   // โดสูง\n  delay(1500);\n  digitalWrite(LED, LOW);\n  Serial.println(\"ล็อกอีกครั้ง เคาะใหม่ได้เลย\");\n}\n\nvoid beep(int freq, int ms) {\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "en": "Tap Sensor",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
+        "เคาะที่ตัวโมดูลเบา ๆ หนึ่งครั้ง ฟังบัซเซอร์ดัง 4 จังหวะสั้น ๆ",
+        "เคาะรัวเร็ว ๆ จะได้เสียงชุดเดียว เพราะโปรแกรมกันนับซ้ำไว้ 250 มิลลิวินาที",
+        "ลองเคาะที่โต๊ะแทนตัวโมดูล เทียบว่าไวต่างกันแค่ไหน",
+        "เคาะเบา ๆ พอ อย่าทุบแรงเพราะโมดูลเสียหายได้"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "17",
+      "base": 9,
+      "group": "agr",
+      "th": "หลอดแอลอีดีสามสี",
+      "how": "ภายในหลอดเดียวมีชิป LED สามดวงคือแดง เขียว น้ำเงิน วางชิดกัน เมื่อสั่งความสว่างแต่ละสีต่างกันด้วย PWM ที่เปิดปิดไฟเร็วมากจนตามองเห็นเป็นความสว่างระดับกลาง แสงทั้งสามจะผสมกันเป็นสีใหม่ โค้ดนี้ตั้งไว้ 12 สี แต่ปรับเลข 0–255 ของแต่ละสีเองได้",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลหลอดไฟสามสี · สายจัมเปอร์ 4 เส้น",
+      "warn": "ใช้ได้เฉพาะขาที่มีเครื่องหมาย ~ บนบอร์ด (3, 5, 6, 9, 10, 11) เท่านั้นจึงจะไล่ระดับสีได้",
+      "pins": [
+        [
+          "R",
+          "D9",
+          "dig",
+          "ต้องเป็นขา PWM"
+        ],
+        [
+          "G",
+          "D10",
+          "dig",
+          "ต้องเป็นขา PWM"
+        ],
+        [
+          "B",
+          "D11",
+          "dig",
+          "ต้องเป็นขา PWM"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม"
+        ]
+      ],
+      "result": "หลอดไล่เปลี่ยนสีทีละสีทุก 1 วินาที ครบ 12 สีแล้ววนใหม่ ตั้งแต่แดง เขียว น้ำเงิน ไปจนถึงส้ม ม่วง และขาว ถ้าสีที่เห็นไม่ตรงกับคอมเมนต์ในโค้ด ให้สลับสายขา R กับ B ดู",
+      "next": "เอาค่าจากเซนเซอร์แสงหรืออุณหภูมิมากำหนดสี ทำไฟบอกสถานะที่เปลี่ยนสีตามค่าที่วัดได้",
+      "job": "ไฟบอกสถานะเครื่องจักร ป้ายไฟและงานตกแต่งอาคาร ไฟแจ้งเตือนที่ใช้สีแทนระดับความรุนแรง",
+      "code": "const int R = 9, G = 10, B = 11;\n\nvoid setColor(int r, int g, int b) {\n  analogWrite(R, r);\n  analogWrite(G, g);\n  analogWrite(B, b);\n}\n\nvoid setup() {\n  pinMode(R, OUTPUT);\n  pinMode(G, OUTPUT);\n  pinMode(B, OUTPUT);\n}\n\nvoid loop() {\n  setColor(255, 0, 0);      delay(1000);    // แดง\n  setColor(0, 255, 0);      delay(1000);    // เขียว\n  setColor(0, 0, 255);      delay(1000);    // น้ำเงิน\n  setColor(255, 255, 0);    delay(1000);    // เหลือง\n  setColor(0, 255, 255);    delay(1000);    // ฟ้า/ไซแอน\n  setColor(255, 0, 255);    delay(1000);    // ชมพูบานเย็น/มาเจนต้า\n  setColor(255, 255, 255);  delay(1000);    // ขาว\n  setColor(255, 128, 0);    delay(1000);    // ส้ม\n  setColor(128, 0, 255);    delay(1000);    // ม่วง\n  setColor(255, 0, 128);    delay(1000);    // ชมพู\n  setColor(128, 255, 0);    delay(1000);    // เขียวมะนาว\n  setColor(0, 128, 255);    delay(1000);    // ฟ้าอมน้ำเงิน\n}",
+      "fun": {
+        "title": "ไฟสามโหมด",
+        "desc": "กดปุ่มสลับระหว่างไฟรุ้งไล่สี ไฟหายใจ และไฟตำรวจแดงน้ำเงิน มีเสียงยืนยันทุกครั้งที่เปลี่ยนโหมด",
+        "parts": "บัซเซอร์ + ปุ่มกด",
+        "code": "//           ปุ่มกด ขาหนึ่ง->D2 อีกขา->GND | บัซเซอร์ +->D8, -->GND\n\nconst int R = 9, G = 10, B = 11;\nconst int BUTTON = 2;\nconst int BUZZER = 8;\n\nint  mode = 0;                       // 0 = รุ้ง, 1 = หายใจ, 2 = ไฟตำรวจ\nbool lastState = HIGH;\n\nvoid setup() {\n  pinMode(R, OUTPUT); pinMode(G, OUTPUT); pinMode(B, OUTPUT);\n  pinMode(BUTTON, INPUT_PULLUP);\n  pinMode(BUZZER, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"กดปุ่มเพื่อเปลี่ยนโหมดไฟ\");\n  Serial.println(\"โหมด 0 : รุ้ง\");\n}\n\nvoid loop() {\n  checkButton();\n\n  if (mode == 0) rainbow();\n  else if (mode == 1) breathe();\n  else police();\n}\n\nvoid checkButton() {\n  bool now = digitalRead(BUTTON);\n  if (lastState == HIGH && now == LOW) {       // จังหวะที่เพิ่งกดลง\n    mode = (mode + 1) % 3;\n    Serial.print(\"โหมด \");\n    Serial.print(mode);\n    Serial.println(mode == 0 ? \" : รุ้ง\" : (mode == 1 ? \" : หายใจ\" : \" : ไฟตำรวจ\"));\n    tone(BUZZER, 1500, 60);\n    delay(50);\n  }\n  lastState = now;\n}\n\nvoid setColor(int r, int g, int b) {\n  analogWrite(R, r); analogWrite(G, g); analogWrite(B, b);\n}\n\nvoid rainbow() {                              // ไล่สีต่อเนื่องทีละขั้น\n  static int h = 0;\n  h = (h + 2) % 360;\n  int s = h / 60, f = (h % 60) * 255 / 60;\n  if (s == 0) setColor(255, f, 0);\n  else if (s == 1) setColor(255 - f, 255, 0);\n  else if (s == 2) setColor(0, 255, f);\n  else if (s == 3) setColor(0, 255 - f, 255);\n  else if (s == 4) setColor(f, 0, 255);\n  else setColor(255, 0, 255 - f);\n  delay(15);\n  checkButton();\n}\n\nvoid breathe() {                              // สว่างขึ้นแล้วหรี่ลงช้า ๆ\n  for (int i = 0; i <= 255; i += 5) { setColor(0, 0, i); delay(12); checkButton(); if (mode != 1) return; }\n  for (int i = 255; i >= 0; i -= 5) { setColor(0, 0, i); delay(12); checkButton(); if (mode != 1) return; }\n}\n\nvoid police() {                               // แดงน้ำเงินสลับเร็ว\n  for (int i = 0; i < 3; i++) { setColor(255, 0, 0); delay(70); setColor(0, 0, 0); delay(50); checkButton(); if (mode != 2) return; }\n  for (int i = 0; i < 3; i++) { setColor(0, 0, 255); delay(70); setColor(0, 0, 0); delay(50); checkButton(); if (mode != 2) return; }\n}"
+      },
+      "en": "RGB LED Module",
+      "steps": [
+        "ต่อสาย R G B เข้าขาที่มีเครื่องหมาย ~ เท่านั้น (3, 5, 6, 9, 10, 11) จึงจะไล่ระดับสีได้",
+        "อัปโหลดโค้ด ดูหลอดไล่เปลี่ยนสีทีละสีทุก 1 วินาที",
+        "เทียบสีที่เห็นกับคอมเมนต์ท้ายบรรทัดในโค้ด ถ้าไม่ตรงให้สลับสาย R กับ B",
+        "แก้ตัวเลขใน setColor เป็นเลข 0–255 ของตัวเอง แล้วอัปโหลดใหม่",
+        "ผสมสีประจำกลุ่มขึ้นมาหนึ่งสี แล้วให้เพื่อนทายว่าใส่เลขอะไรไปบ้าง"
+      ],
+      "wiring": true
+    },
+    {
+      "no": "18",
+      "base": 9,
+      "group": "agr",
+      "th": "โมดูลปุ่มกด",
+      "how": "ปุ่มกดทำหน้าที่ต่อหรือตัดวงจร แต่หน้าสัมผัสจริงจะกระเด้งไปมาเสี้ยววินาทีตอนกด เรียกว่าอาการเด้ง โปรแกรมจึงตรวจเฉพาะจังหวะที่สถานะเปลี่ยนจากปล่อยเป็นกด แล้วหน่วงเวลาเล็กน้อยเพื่อกันอ่านซ้ำ ใช้ INPUT_PULLUP ทำให้ค่าปกติเป็น HIGH และเป็น LOW ตอนกด",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลปุ่มกด · สายจัมเปอร์ 3 เส้น",
+      "warn": "INPUT_PULLUP ทำให้ค่าปกติเป็น HIGH และกลายเป็น LOW ตอนกด อย่าลืมว่าตรรกะกลับด้าน",
+      "pins": [
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "สัญญาณดิจิทัล อ่านด้วย INPUT_PULLUP",
+          "โมดูลปุ่มกด"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "โมดูลปุ่มกด"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "โมดูลปุ่มกด"
+        ],
+        [
+          "S / OUT",
+          "D9",
+          "dig",
+          "ขาสั่งให้ติด",
+          "โมดูลไฟ LED"
+        ],
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์",
+          "โมดูลไฟ LED"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม",
+          "โมดูลไฟ LED"
+        ]
+      ],
+      "result": "กดหนึ่งครั้งไฟบนโมดูลไฟ LED ติด กดอีกครั้งดับ โปรแกรมจับเฉพาะจังหวะกดลงและหน่วง 50 มิลลิวินาทีกันเด้ง กดค้างไว้ไฟจะไม่กะพริบ เพราะนับเฉพาะตอนเปลี่ยนสถานะ",
+      "next": "ใช้ปุ่มเลือกโหมดการทำงานของเซนเซอร์ตัวอื่น เช่น กดสลับระหว่างแสดงองศาเซลเซียสกับฟาเรนไฮต์",
+      "job": "แผงควบคุมเครื่องจักร ปุ่มหยุดฉุกเฉิน อุปกรณ์อิเล็กทรอนิกส์แทบทุกชนิดที่ต้องรับคำสั่งจากคน",
+      "code": "const int BUTTON = 2;\nconst int LED    = 9;\n\nbool ledOn = false;\nbool lastState = HIGH;\n\nvoid setup() {\n  pinMode(BUTTON, INPUT_PULLUP);\n  pinMode(LED, OUTPUT);\n}\n\nvoid loop() {\n  bool state = digitalRead(BUTTON);\n\n  if (lastState == HIGH && state == LOW) {   // จังหวะที่เพิ่งกดลง\n    ledOn = !ledOn;\n    digitalWrite(LED, ledOn);\n    delay(50);                               // กันอาการเด้ง\n  }\n  lastState = state;\n}",
+      "fun": {
+        "title": "เกมวัดปฏิกิริยา",
+        "desc": "รอสัญญาณเสียงแล้วกดปุ่มให้เร็วที่สุด วัดผลเป็นมิลลิวินาทีและเก็บสถิติดีที่สุด กดก่อนสัญญาณถือว่าฟาวล์ เด็กแข่งกันได้ทั้งกลุ่ม",
+        "parts": "บัซเซอร์",
+        "code": "const int BUTTON = 2;\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nunsigned long best = 999999;         // สถิติดีที่สุด\nint round_ = 0;\n\nvoid setup() {\n  pinMode(BUTTON, INPUT_PULLUP);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  randomSeed(analogRead(A0));\n  Serial.println(\"=== เกมวัดปฏิกิริยา ===\");\n  Serial.println(\"พอไฟติดและมีเสียง ให้กดปุ่มให้เร็วที่สุด\");\n  Serial.println(\"กดปุ่มเพื่อเริ่ม\");\n  while (digitalRead(BUTTON) == HIGH) { }     // รอกดเริ่ม\n  delay(300);\n}\n\nvoid loop() {\n  round_++;\n  Serial.print(\"\\nรอบที่ \");\n  Serial.print(round_);\n  Serial.println(\"  เตรียมตัว...\");\n\n  int wait = random(2000, 5000);              // สุ่มเวลารอ กันเดา\n  unsigned long start = millis();\n  while (millis() - start < (unsigned long)wait) {\n    if (digitalRead(BUTTON) == LOW) {         // กดก่อนสัญญาณ = ฟาวล์\n      Serial.println(\"กดเร็วเกินไป! รอสัญญาณก่อน\");\n      tone(BUZZER, 300, 500); delay(600);\n      waitRelease();\n      return;\n    }\n  }\n\n  digitalWrite(LED, HIGH);                    // สัญญาณ!\n  tone(BUZZER, 2000);\n  unsigned long signalAt = millis();\n\n  while (digitalRead(BUTTON) == HIGH) { }     // รอจนกด\n  unsigned long ms = millis() - signalAt;     // ต้องเป็น unsigned long ไม่ใช่ int\n\n  noTone(BUZZER);\n  digitalWrite(LED, LOW);\n\n  Serial.print(\"เวลาปฏิกิริยา \");\n  Serial.print(ms);\n  Serial.println(\" มิลลิวินาที\");\n\n  if (ms < best) {\n    best = ms;\n    Serial.println(\">>> สถิติใหม่! <<<\");\n    tone(BUZZER, 1046, 100); delay(120);\n    tone(BUZZER, 1568, 100); delay(120);\n    tone(BUZZER, 2093, 250); delay(300);\n  }\n  Serial.print(\"สถิติดีที่สุด \");\n  Serial.print(best);\n  Serial.println(\" มิลลิวินาที\");\n\n  waitRelease();\n  Serial.println(\"กดปุ่มอีกครั้งเพื่อเล่นรอบต่อไป\");\n  while (digitalRead(BUTTON) == HIGH) { }\n  waitRelease();\n}\n\nvoid waitRelease() {                          // รอจนปล่อยปุ่ม กันอ่านซ้ำ\n  while (digitalRead(BUTTON) == LOW) { }\n  delay(50);\n}"
+      },
+      "lcd": {
+        "title": "เกมวัดปฏิกิริยาบนจอ",
+        "desc": "จอโชว์เวลาปฏิกิริยาและสถิติดีที่สุด กดก่อนสัญญาณขึ้น TOO EARLY! เด็กแข่งกันได้โดยไม่ต้องเปิด Serial Monitor",
+        "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
+        "code": "// เกมวัดปฏิกิริยา จอแสดงผล โชว์เวลาและสถิติ ไม่ต้องเปิด Serial Monitor\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int BUTTON = 2;\nconst int BUZZER = 8;\n\nunsigned long best = 999999;\nint round_ = 0;\n\nvoid setup() {\n  pinMode(BUTTON, INPUT_PULLUP);\n  pinMode(BUZZER, OUTPUT);\n  lcd.init(); lcd.backlight();\n  randomSeed(analogRead(A0));\n\n  lcd.print(\"Reaction Game\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Press to start\");\n  while (digitalRead(BUTTON) == HIGH) { }\n  waitRelease();\n}\n\nvoid loop() {\n  round_++;\n  lcd.clear();\n  lcd.print(\"Round \");\n  lcd.print(round_);\n  lcd.setCursor(0, 1);\n  lcd.print(\"Get ready...\");\n\n  unsigned long wait = random(2000, 5000);        // สุ่มเวลารอ กันเดา\n  unsigned long start = millis();\n  while (millis() - start < wait) {\n    if (digitalRead(BUTTON) == LOW) {             // กดก่อนสัญญาณ = ฟาวล์\n      lcd.clear();\n      lcd.print(\"TOO EARLY!\");\n      lcd.setCursor(0, 1);\n      lcd.print(\"Wait for beep\");\n      tone(BUZZER, 300, 500);\n      delay(1500);\n      waitRelease();\n      return;\n    }\n  }\n\n  lcd.clear();\n  lcd.print(\"*** NOW! ***\");\n  tone(BUZZER, 2000);\n  unsigned long signalAt = millis();\n\n  while (digitalRead(BUTTON) == HIGH) { }\n  unsigned long ms = millis() - signalAt;\n  noTone(BUZZER);\n\n  lcd.clear();\n  lcd.print(\"Time \");\n  lcd.print(ms);\n  lcd.print(\" ms\");\n\n  lcd.setCursor(0, 1);\n  if (ms < best) {\n    best = ms;\n    lcd.print(\"NEW RECORD!\");\n    tone(BUZZER, 1046, 100); delay(120);\n    tone(BUZZER, 1568, 100); delay(120);\n    tone(BUZZER, 2093, 250); delay(300);\n  } else {\n    lcd.print(\"Best \");\n    lcd.print(best);\n    lcd.print(\" ms\");\n  }\n\n  waitRelease();\n  delay(1200);\n  while (digitalRead(BUTTON) == HIGH) { }         // รอกดเล่นรอบต่อไป\n  waitRelease();\n}\n\nvoid waitRelease() {\n  while (digitalRead(BUTTON) == LOW) { }\n  delay(50);\n}"
+      },
+      "en": "Button Module",
+      "steps": [
+        "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
+        "กดปุ่มหนึ่งครั้ง ไฟบนโมดูลไฟ LED จะติด",
+        "กดอีกครั้ง ไฟจะดับ",
+        "กดปุ่มค้างไว้ ดูว่าไฟไม่กะพริบ เพราะโปรแกรมนับเฉพาะจังหวะที่เพิ่งกดลง",
+        "ลองแก้เลข delay จาก 50 เป็น 0 แล้วอัปโหลดใหม่ ดูว่าเกิดอาการกดครั้งเดียวติดสองครั้งไหม"
+      ],
+      "wiring": true
+    }
+  ]
+}

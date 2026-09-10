@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# กิจกรรมนักสำรวจเซนเซอร์ (Sensor Explorer)
 
-## Getting Started
+เว็บกิจกรรมค่าย 9 จุดสำรวจ เซนเซอร์ 18 ชนิด แต่ละจุดมีตารางการต่อสาย รูปผังการต่อสาย วิธีการทดลอง และโค้ด Arduino ที่คัดลอกไปวางใน Arduino IDE ได้ทันที
 
-First, run the development server:
+**เว็บจริง: https://sensorcamp.netlify.app**
+
+สร้างด้วย Next.js (App Router) ส่งออกเป็นไฟล์ static ทั้งชุด ไม่ต้องมีเซิร์ฟเวอร์ตอนใช้งาน
+
+## คำสั่งที่ใช้บ่อย
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+เปิดที่ http://localhost:3000 · ถ้าจะให้มือถือของเด็กเข้าใช้ในวันจัดค่าย ให้ดูบรรทัด `Network:` ที่ขึ้นตอนสั่ง dev แล้วใช้เลข IP นั้น (ต้องอยู่ Wi-Fi วงเดียวกัน)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+สร้างโฟลเดอร์ `out/` พร้อมอัปขึ้นเว็บ · คำสั่งนี้เรียก `npm run data` ให้อัตโนมัติ จึงไม่ต้องกลัวลืมสร้างข้อมูลใหม่
 
-## Learn More
+```bash
+npx netlify deploy --prod
+```
 
-To learn more about Next.js, take a look at the following resources:
+ขึ้นเว็บจริง (โฟลเดอร์นี้ผูกกับไซต์ sensorcamp ไว้แล้วด้วย `netlify link` จึงไม่ต้องระบุไซต์)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## คำสั่งตรวจสอบ
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| คำสั่ง | ตรวจอะไร |
+| --- | --- |
+| `npm run audit` | โค้ดเป็นของเซนเซอร์ตัวนั้นจริงไหม · มีไฟล์ซ้ำกันไหม · ข้อความบนจอเป็นของตัวอื่นหรือเปล่า · โค้ดใช้จอ/บัซเซอร์แต่ตารางไม่มี · เนื้อหาครบทุกช่อง · มีรูปผัง |
+| `npm run check-wiring` | ทุกขาที่โค้ดเรียกใช้มีในตารางไหม · ทุกอุปกรณ์มีขาไฟกับขากราวด์ครบไหม |
+| `npm run verify-code` | ตัวคำสั่งของโค้ด Arduino ไม่ถูกแก้ นอกจากคอมเมนต์ |
 
-## Deploy on Vercel
+## ป้าย QR ประจำจุดสำรวจ
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run qr -- https://sensorcamp.netlify.app/
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ได้โฟลเดอร์ `qr/` (ไม่ขึ้น git เพราะสร้างใหม่ได้เสมอ)
+
+- `print-qr.html` — A5 แนวนอน จุดละ 1 แผ่น เปิดแล้วกด Ctrl+P สั่งพิมพ์ได้เลย QR ฝังอยู่ในไฟล์
+- `station-1.png` … `station-9.png` — ภาพแยกใบ 1200 px
+
+## โครงสร้าง
+
+| ที่อยู่ | ทำอะไร |
+| --- | --- |
+| `app/page.tsx` | หน้าแรก แผนที่จุดสำรวจ 9 จุด |
+| `app/base/[id]/page.tsx` | หน้าจุดสำรวจ 1–9 (สร้างเป็น static ตอน build) |
+| `app/print/page.tsx` | หน้าสร้าง QR ในเบราว์เซอร์ สำหรับครู |
+| `components/` | การ์ดเซนเซอร์ ตารางต่อสาย บล็อกโค้ด ตัวขยายรูป |
+| `data/code/NN.ino` | โค้ด Arduino ของเซนเซอร์แต่ละตัว **แก้ที่นี่** |
+| `data/overrides.json` | ชื่อ ตารางขา เนื้อหา วิธีการทดลอง และการจัดจุดสำรวจ **แก้ที่นี่** |
+| `data/sensors.json` | ข้อมูลที่ประกอบเสร็จแล้ว (สร้างจากสคริปต์ ไม่ต้องแก้มือ) |
+| `public/wiring/NN.webp` | รูปผังการต่อสาย ตั้งชื่อตามเลขเซนเซอร์ |
+| `legacy/` | เว็บเวอร์ชันไฟล์เดียวของเดิม เก็บไว้เป็นต้นทางข้อมูล |
+| `scripts/` | สคริปต์ประกอบข้อมูล ตรวจสอบ และสร้าง QR |
+
+## วิธีแก้ของที่แก้บ่อย
+
+**แก้โค้ดเซนเซอร์** — แก้ไฟล์ `data/code/NN.ino` แล้ว `npm run build`
+
+**แก้ตารางต่อสาย ชื่อ หรือเนื้อหา** — แก้ `data/overrides.json` แล้ว `npm run build`
+
+**เพิ่มหรือเปลี่ยนรูปผังการต่อสาย** — วางไฟล์ชื่อ `NN.webp` ที่ `public/wiring/` แล้ว `npm run build` (สคริปต์สแกนโฟลเดอร์เอง ไม่ต้องแก้โค้ด)
+
+**สลับว่าจุดสำรวจไหนมีเซนเซอร์อะไร** — แก้คีย์ `_bases` ใน `data/overrides.json`
+
+```json
+"_bases": { "4": ["07", "10"], "5": ["08", "09"] }
+```
+
+## เรื่องชื่อรุ่นเซนเซอร์
+
+ข้อความที่เด็กเห็นทุกจุดไม่มีชื่อรุ่น ทั้งรายการอุปกรณ์และคอมเมนต์ในโค้ด แต่ละตัวมีชื่อไทยคู่กับชื่ออังกฤษที่เรียกตามหน้าที่ เช่น `Light Sensor` ไม่ใช่ `Photoresistor (LDR)`
+
+ตัวคำสั่งของโค้ด Arduino ไม่ถูกแตะ (เช่น `#include <DHT.h>` ยังเหมือนเดิม) เพราะถ้าแก้จะคอมไพล์ไม่ผ่าน

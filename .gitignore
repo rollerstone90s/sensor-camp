@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local Netlify folder
+.netlify
+
+# ป้าย QR ที่สร้างจากสคริปต์ (npm run qr)
+/qr
