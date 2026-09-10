@@ -43,7 +43,7 @@ for (const st of stations) {
         <p class="eyebrow">กิจกรรมนักสำรวจเซนเซอร์</p>
         <h1 class="no">จุดสำรวจที่ <span class="num">${st.id}</span></h1>
         <ul class="list">
-          ${st.sensors.map((s) => `<li><b>${s.no}</b><span>${esc(s.th)}</span></li>`).join("")}
+          ${st.sensors.map((s) => `<li><b>${s.no}</b><span>${esc(s.en)}</span></li>`).join("")}
         </ul>
         <p class="call">สแกน QR เพื่อดูผังการต่อสายและโค้ดของจุดนี้</p>
       </div>
@@ -54,44 +54,69 @@ for (const st of stations) {
     </section>`);
 }
 
+/* วางป้าย A5 สองใบต่อกระดาษ A4 หนึ่งแผ่น ปริ้นเสร็จตัดครึ่งกลางได้เลย */
+const pages = [];
+for (let i = 0; i < sheets.length; i += 2) {
+  const second = sheets[i + 1] ?? '<section class="sheet blank"></section>';
+  pages.push(`<div class="page">${sheets[i]}${second}</div>`);
+}
+
 const html = `<!doctype html>
 <html lang="th">
 <head>
 <meta charset="utf-8">
 <title>ป้าย QR ประจำจุดสำรวจ · นักสำรวจเซนเซอร์</title>
 <style>
-  /* A5 แนวนอน หนึ่งจุดสำรวจต่อหนึ่งแผ่น */
-  @page { size: A5 landscape; margin: 0; }
+  /* กระดาษ A4 แนวตั้ง หนึ่งแผ่นวางป้าย A5 แนวนอนสองใบ ตัดครึ่งกลางได้ */
+  @page { size: A4 portrait; margin: 0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: #e9e6df; }
   body {
     font-family: "IBM Plex Sans Thai", "Sarabun", system-ui, sans-serif;
     color: #17211f;
   }
-  .sheet {
+  .page {
     position: relative;
     width: 210mm;
-    height: 148mm;
+    height: 297mm;
     margin: 0 auto 6mm;
-    padding: 14mm 14mm 12mm 18mm;
     background: #fff;
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12mm;
-    align-items: center;
+    grid-template-rows: 1fr 1fr;
     overflow: hidden;
     page-break-after: always;
     break-after: page;
   }
-  .sheet:last-child { page-break-after: auto; break-after: auto; }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+  /* เส้นประกลางหน้าไว้เล็งตอนตัด */
+  .page::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px dashed #c2bcae;
+  }
+  .sheet {
+    position: relative;
+    height: 148.5mm;
+    padding: 12mm 13mm 11mm 17mm;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10mm;
+    align-items: center;
+    overflow: hidden;
+  }
+  .sheet.blank { background: #fff; }
   /* แถบสีประจำหมวดที่ขอบซ้าย ช่วยให้ครูหยิบป้ายถูกจุดเร็วขึ้น */
   .sheet::before {
     content: "";
     position: absolute;
     left: 0; top: 0; bottom: 0;
-    width: 8mm;
+    width: 7mm;
     background: var(--accent);
   }
+  .sheet.blank::before { display: none; }
   .eyebrow {
     margin: 0 0 3mm;
     font-size: 11pt;
@@ -100,16 +125,16 @@ const html = `<!doctype html>
     color: #7f8b86;
   }
   .no {
-    margin: 0 0 6mm;
-    font-size: 34pt;
+    margin: 0 0 5mm;
+    font-size: 31pt;
     font-weight: 700;
     line-height: 1.2;
   }
   .no .num {
     color: var(--accent);
-    font-size: 46pt;
+    font-size: 42pt;
   }
-  .list { list-style: none; margin: 0 0 7mm; padding: 0; display: grid; gap: 2.5mm; }
+  .list { list-style: none; margin: 0 0 6mm; padding: 0; display: grid; gap: 2.5mm; }
   .list li { display: flex; align-items: baseline; gap: 3mm; font-size: 15pt; line-height: 1.5; }
   .list b {
     font-family: ui-monospace, monospace;
@@ -121,27 +146,27 @@ const html = `<!doctype html>
   }
   .call { margin: 0; font-size: 12pt; color: #4d5a56; }
   .right { text-align: center; }
-  .right img { width: 76mm; height: 76mm; display: block; }
+  .right img { width: 68mm; height: 68mm; display: block; }
   .url {
     margin: 2.5mm 0 0;
     font-family: ui-monospace, monospace;
     font-size: 7.5pt;
     color: #8a938f;
     word-break: break-all;
-    max-width: 76mm;
+    max-width: 68mm;
   }
   @media print {
     html, body { background: #fff; }
-    .sheet { margin: 0; box-shadow: none; }
+    .page { margin: 0; box-shadow: none; }
   }
   @media screen {
     body { padding: 6mm 0; }
-    .sheet { box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+    .page { box-shadow: 0 2px 12px rgba(0,0,0,.12); }
   }
 </style>
 </head>
 <body>
-${sheets.join("")}
+${pages.join("")}
 </body>
 </html>`;
 
@@ -149,5 +174,5 @@ fs.writeFileSync(path.join(outDir, "print-qr.html"), html);
 
 console.log(`สร้าง QR ${stations.length} ใบ ที่โฟลเดอร์ ${outDir}/`);
 console.log(`  ภาพแยกใบ : station-1.png ถึง station-${stations.length}.png (1200 px)`);
-console.log(`  หน้าพิมพ์ : ${outDir}/print-qr.html (A5 แนวนอน จุดละ 1 แผ่น)`);
+console.log(`  หน้าพิมพ์ : ${outDir}/print-qr.html (A4 แนวตั้ง แผ่นละ 2 ป้าย รวม ${pages.length} แผ่น)`);
 console.log(`  ชี้ไปที่   : ${base}base/1/ ... ${base}base/${stations.length}/`);

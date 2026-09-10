@@ -20,11 +20,11 @@
     ],
     "4": [
       "07",
-      "10"
+      "08"
     ],
     "5": [
-      "08",
-      "09"
+      "09",
+      "10"
     ],
     "6": [
       "11",
@@ -645,33 +645,40 @@
     },
     {
       "no": "08",
-      "base": 5,
+      "base": 4,
       "group": "eng",
-      "th": "เซนเซอร์สนามแม่เหล็ก",
-      "how": "อาศัยปรากฏการณ์ฮอลล์ เมื่อมีกระแสไหลผ่านแผ่นสารกึ่งตัวนำและมีสนามแม่เหล็กมาตัด จะเกิดแรงดันขึ้นที่ด้านข้างของแผ่น ชิปขยายและเปรียบเทียบแรงดันนี้ แล้วส่งออกเป็นสัญญาณดิจิทัลว่ามีแม่เหล็กอยู่ใกล้หรือไม่ ไม่ได้บอกว่าใกล้แค่ไหน",
-      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์สนามแม่เหล็ก · แม่เหล็กถาวร",
-      "warn": "ชิปตอบสนองต่อขั้วแม่เหล็กด้านเดียว ถ้าเอาเข้าใกล้แล้วไม่มีอะไรเกิดขึ้น ให้กลับด้านแม่เหล็กก่อนแล้วลองใหม่",
+      "th": "เซนเซอร์วัดระยะอัลตราโซนิก",
+      "how": "ส่งคลื่นเสียงความถี่สูงที่หูคนไม่ได้ยินออกไปกระทบวัตถุแล้วสะท้อนกลับ โปรแกรมจับเวลาไปกลับของคลื่น คูณด้วยความเร็วเสียงราว 343 เมตรต่อวินาที แล้วหารสองเพราะเป็นระยะไปกลับ ก็จะได้ระยะห่างจริง",
+      "parts": "บอร์ด Arduino Uno R3 · เซนเซอร์อัลตราโซนิก · สายจัมเปอร์ 4 เส้น",
+      "warn": "สเปกบอก 2–400 ซม. แต่ในห้องจริงเชื่อถือได้ราว 2–200 ซม. วัตถุนุ่มอย่างผ้าหรือฟองน้ำสะท้อนคลื่นไม่ดี ค่าจะเพี้ยนหรือขึ้น Out of range",
       "pins": [
         [
-          "S / OUT",
-          "D2",
+          "TRIG",
+          "D9",
           "dig",
-          "สัญญาณดิจิทัล",
-          "เซนเซอร์สนามแม่เหล็ก"
+          "สั่งปล่อยคลื่นเสียง",
+          "เซนเซอร์วัดระยะอัลตราโซนิก"
+        ],
+        [
+          "ECHO",
+          "D10",
+          "dig",
+          "รับสัญญาณสะท้อนกลับ",
+          "เซนเซอร์วัดระยะอัลตราโซนิก"
         ],
         [
           "+ / VCC",
           "5V",
           "pwr",
           "จ่ายไฟ 5 โวลต์",
-          "เซนเซอร์สนามแม่เหล็ก"
+          "เซนเซอร์วัดระยะอัลตราโซนิก"
         ],
         [
           "- / GND",
           "GND",
           "gnd",
           "กราวด์ร่วม",
-          "เซนเซอร์สนามแม่เหล็ก"
+          "เซนเซอร์วัดระยะอัลตราโซนิก"
         ],
         [
           "SDA",
@@ -702,29 +709,29 @@
           "จอแสดงผล"
         ]
       ],
-      "result": "จอบรรทัดบนขึ้น Hall: ตามด้วย 0 หรือ 1 บรรทัดล่างขึ้น Magnet Found หรือ No Magnet อัปเดตทุก 0.15 วินาที นำแม่เหล็กเข้าใกล้ราว 1–2 เซนติเมตรข้อความจะเปลี่ยนทันที ถ้าขึ้นกลับด้านให้สลับเงื่อนไข LOW กับ HIGH ในโค้ด",
-      "next": "ติดแม่เหล็กบนล้อจักรยานหนึ่งก้อน แล้วนับว่าล้อหมุนครบกี่รอบในหนึ่งนาที",
-      "job": "มาตรวัดความเร็วรถจักรยาน เซนเซอร์นับรอบมอเตอร์ ระบบตรวจว่าฝาครอบเครื่องจักรปิดสนิทหรือยัง",
-      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n\nconst int PIN_HALL = 2;\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n\n  Serial.begin(9600);\n\n  lcd.init();\n  lcd.backlight();\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Magnetic Sensor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  int hallValue = digitalRead(PIN_HALL);\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Hall: \");\n  lcd.print(hallValue);\n  lcd.print(\"          \");\n\n  lcd.setCursor(0, 1);\n\n  if (hallValue == LOW) {\n    Serial.println(\"พบแม่เหล็ก\");\n    lcd.print(\"Magnet Found    \");\n  } else {\n    Serial.println(\"ไม่พบแม่เหล็ก\");\n    lcd.print(\"No Magnet       \");\n  }\n\n  delay(150);\n}",
+      "result": "จอขึ้น Dist ตามด้วยเลขเซนติเมตร ไกลกว่า 50 ซม. ขึ้น SAFE ระหว่าง 10–50 ซม. ขึ้นแถบทึบที่ยาวขึ้นและกะพริบถี่ขึ้นเมื่อเข้าใกล้ ใกล้กว่า 10 ซม. ขึ้น STOP! ถ้าจับสัญญาณสะท้อนไม่ได้จะขึ้น Out of range",
+      "next": "วัดเทียบไม้บรรทัดจริงที่ระยะ 10, 30 และ 50 ซม. จดว่าคลาดเคลื่อนกี่เซนติเมตรในแต่ละระยะ",
+      "job": "เซนเซอร์ถอยหลังในรถยนต์ หุ่นยนต์หลบสิ่งกีดขวาง เครื่องวัดระดับน้ำในถังโดยไม่ต้องจุ่มลงน้ำ",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\nconst int TRIG = 9, ECHO = 10;\nvoid setup() {\n  pinMode(TRIG, OUTPUT); pinMode(ECHO, INPUT);\n  lcd.init(); lcd.backlight();\n  lcd.print(\"Parking Sensor\");\n  delay(1500);\n  lcd.clear();\n}\nvoid loop() {\n  float cm = readDistance();\n  lcd.setCursor(0, 0);\n  if (cm <= 0) {\n    lcd.print(\"Out of range    \");\n    lcd.setCursor(0, 1); lcd.print(\"                \");\n    delay(250);\n    return;\n  }\n  lcd.print(\"Dist \");\n  lcd.print(cm, 0);\n  lcd.print(\" cm      \");\n  lcd.setCursor(0, 1);\n  if (cm > 50) {\n    lcd.print(\"SAFE            \");\n    delay(200);\n  } else if (cm > 10) {\n    int bars = map((long)cm, 10, 50, 16, 1);     // ใกล้ = แถบยาว\n    for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n    delay(map((long)cm, 10, 50, 60, 500));\n  } else {\n    lcd.print(\">>>  STOP!  <<<<\");\n    delay(450);\n  }\n}\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}",
       "fun": {
-        "title": "เครื่องวัดรอบ",
-        "desc": "ติดแม่เหล็กบนล้อแล้วหมุน เครื่องนับรอบและคำนวณเป็นรอบต่อนาทีให้ทุก 3 วินาที เหมือนมาตรวัดความเร็วรถจริง",
+        "title": "เซนเซอร์ถอยรถ",
+        "desc": "ยิ่งเข้าใกล้บัซเซอร์ยิ่งบี๊บถี่ขึ้น ใกล้กว่า 10 ซม. จะดังยาวเตือนให้หยุด เหมือนระบบช่วยจอดในรถยนต์",
         "parts": "บัซเซอร์",
-        "code": "const int PIN_HALL = 2;\nconst int BUZZER   = 8;\nconst int LED      = 13;\n\nint  turns = 0;\nbool near  = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"เอาแม่เหล็กผ่านหน้าเซนเซอร์ซ้ำ ๆ แล้วดูรอบต่อนาที\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอแม่เหล็ก\n\n  if (found && !near) {                          // เพิ่งผ่านมา นับ 1 รอบ\n    turns++;\n    digitalWrite(LED, HIGH);\n    beep(2200, 30);\n    digitalWrite(LED, LOW);\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปทุก 3 วินาที\n    int rpm = turns * 20;                        // 3 วินาที x 20 = 1 นาที\n    Serial.print(\"นับได้ \");\n    Serial.print(turns);\n    Serial.print(\" รอบ ใน 3 วินาที  =  \");\n    Serial.print(rpm);\n    Serial.println(\" รอบต่อนาที\");\n    turns = 0;\n    lastReport = millis();\n  }\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+        "code": "const int TRIG = 9, ECHO = 10;\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nvoid setup() {\n  pinMode(TRIG, OUTPUT);\n  pinMode(ECHO, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"เลื่อนมือเข้าออกหน้าเซนเซอร์\");\n}\n\nvoid loop() {\n  float cm = readDistance();\n\n  if (cm <= 0) {                       // วัดไม่ได้ ข้ามรอบนี้\n    Serial.println(\"วัดไม่ได้\");\n    delay(200);\n    return;\n  }\n\n  Serial.print(cm, 0);\n  Serial.print(\" ซม.  \");\n\n  if (cm > 50) {                       // ไกล ปลอดภัย ไม่ต้องเตือน\n    Serial.println(\"ปลอดภัย\");\n    digitalWrite(LED, LOW);\n    delay(200);\n  } else if (cm > 10) {                // ใกล้ขึ้น บี๊บถี่ขึ้นเรื่อย ๆ\n    Serial.println(\"ระวัง\");\n    digitalWrite(LED, HIGH);\n    beep(1500, 60);\n    digitalWrite(LED, LOW);\n    delay(map((long)cm, 10, 50, 40, 500));   // ยิ่งใกล้ ยิ่งหน่วงสั้น\n  } else {                             // ใกล้มาก ดังยาว\n    Serial.println(\">> ใกล้มาก หยุด! <<\");\n    digitalWrite(LED, HIGH);\n    beep(2500, 400);\n    digitalWrite(LED, LOW);\n    delay(60);\n  }\n}\n\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);       // รอไม่เกิน 30 มิลลิวินาที\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
       },
       "lcd": {
-        "title": "ทดสอบขั้วแม่เหล็ก + วัดรอบ",
-        "desc": "เอาแม่เหล็กขั้ว N และ S มาลองสลับกัน จะพบว่าติดแค่ขั้วเดียว ถ้ายังไม่ติดเลยจอจะขึ้น Flip magnet? ให้ลองกลับด้าน พอติดแล้วจะเปลี่ยนเป็นเครื่องวัดรอบต่อนาที",
+        "title": "จอถอยรถพร้อมแถบเตือน",
+        "desc": "จอโชว์ระยะเป็นเซนติเมตร แถบล่างยาวขึ้นเมื่อเข้าใกล้ ใกล้กว่า 10 ซม. ขึ้น STOP! เต็มบรรทัด",
         "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
-        "code": "// สองอย่างในตัวเดียว : ทดสอบขั้วแม่เหล็ก N/S + เครื่องวัดรอบ\n// ชิปในเซนเซอร์ตอบสนองขั้วเดียวเท่านั้น เอาอีกขั้วมาจะไม่ติดเลย\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int PIN_HALL = 2;\nconst int BUZZER   = 8;\n\nint  turns = 0;\nint  totalHits = 0;\nbool near = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  lcd.init();\n  lcd.backlight();\n\n  lcd.print(\"Magnet Tester\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Try both poles!\");\n  delay(2500);\n  lcd.clear();\n  lcd.print(\"Waiting magnet\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอขั้วที่ถูก\n\n  if (found && !near) {                          // เพิ่งผ่านเข้ามา\n    turns++;\n    totalHits++;\n    tone(BUZZER, 2200, 30);\n    lcd.setCursor(0, 0);\n    lcd.print(\"FOUND! pole OK  \");\n  }\n  if (!found && near) {\n    lcd.setCursor(0, 0);\n    lcd.print(\"No magnet       \");\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปรอบทุก 3 วินาที\n    lcd.setCursor(0, 1);\n    if (totalHits == 0) {\n      lcd.print(\"Flip magnet? \");                // ยังไม่เคยติดเลย แนะให้กลับขั้ว\n      lcd.print(\"   \");\n    } else {\n      int rpm = turns * 20;                      // 3 วินาที x 20 = 1 นาที\n      lcd.print(\"RPM \");\n      lcd.print(rpm);\n      lcd.print(\"        \");\n    }\n    turns = 0;\n    lastReport = millis();\n  }\n}"
+        "code": "// จอแสดงผล โชว์ระยะเป็นเซนติเมตร + แถบเตือน ยิ่งใกล้ยิ่งบี๊บถี่\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int TRIG = 9, ECHO = 10;\nconst int BUZZER = 8;\n\nvoid setup() {\n  pinMode(TRIG, OUTPUT); pinMode(ECHO, INPUT); pinMode(BUZZER, OUTPUT);\n  lcd.init(); lcd.backlight();\n  lcd.print(\"Parking Sensor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  float cm = readDistance();\n\n  lcd.setCursor(0, 0);\n  if (cm <= 0) {\n    lcd.print(\"Out of range    \");\n    lcd.setCursor(0, 1); lcd.print(\"                \");\n    delay(250);\n    return;\n  }\n\n  lcd.print(\"Dist \");\n  lcd.print(cm, 0);\n  lcd.print(\" cm      \");\n\n  lcd.setCursor(0, 1);\n  if (cm > 50) {\n    lcd.print(\"SAFE            \");\n    delay(200);\n  } else if (cm > 10) {\n    int bars = map((long)cm, 10, 50, 16, 1);     // ใกล้ = แถบยาว\n    for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n    tone(BUZZER, 1500, 60);\n    delay(map((long)cm, 10, 50, 60, 500));       // ใกล้ = บี๊บถี่\n  } else {\n    lcd.print(\">>>  STOP!  <<<<\");\n    tone(BUZZER, 2500, 400);\n    delay(450);\n  }\n}\n\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}"
       },
-      "en": "Magnetic Sensor",
+      "en": "Ultrasonic Sensor",
       "steps": [
         "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
-        "นำแม่เหล็กเข้าใกล้เซนเซอร์ราว 1–2 ซม. ดูจอเปลี่ยนเป็น Magnet Found",
-        "เอาแม่เหล็กออก จอกลับเป็น No Magnet",
-        "กลับขั้วแม่เหล็กแล้วลองใหม่ จะพบว่าตรวจเจอแค่ขั้วเดียว",
-        "ค่อย ๆ ถอยแม่เหล็กออก วัดว่าไกลสุดกี่เซนติเมตรที่ยังตรวจเจอ"
+        "วางไม้บรรทัดหน้าเซนเซอร์ วัดที่ระยะ 10, 30 และ 50 ซม. จดค่าบนจอเทียบกับของจริง",
+        "เลื่อนฝ่ามือเข้าใกล้ช้า ๆ ดูแถบบนจอยาวขึ้นและกะพริบถี่ขึ้น",
+        "เข้าใกล้กว่า 10 ซม. จอจะขึ้น STOP!",
+        "ลองวัดผ้าหรือฟองน้ำเทียบกับกระดาษแข็ง ดูว่าค่าต่างกันไหม"
       ],
       "wiring": true
     },
@@ -817,40 +824,33 @@
     },
     {
       "no": "10",
-      "base": 4,
+      "base": 5,
       "group": "eng",
-      "th": "เซนเซอร์วัดระยะอัลตราโซนิก",
-      "how": "ส่งคลื่นเสียงความถี่สูงที่หูคนไม่ได้ยินออกไปกระทบวัตถุแล้วสะท้อนกลับ โปรแกรมจับเวลาไปกลับของคลื่น คูณด้วยความเร็วเสียงราว 343 เมตรต่อวินาที แล้วหารสองเพราะเป็นระยะไปกลับ ก็จะได้ระยะห่างจริง",
-      "parts": "บอร์ด Arduino Uno R3 · เซนเซอร์อัลตราโซนิก · สายจัมเปอร์ 4 เส้น",
-      "warn": "สเปกบอก 2–400 ซม. แต่ในห้องจริงเชื่อถือได้ราว 2–200 ซม. วัตถุนุ่มอย่างผ้าหรือฟองน้ำสะท้อนคลื่นไม่ดี ค่าจะเพี้ยนหรือขึ้น Out of range",
+      "th": "เซนเซอร์สนามแม่เหล็ก",
+      "how": "อาศัยปรากฏการณ์ฮอลล์ เมื่อมีกระแสไหลผ่านแผ่นสารกึ่งตัวนำและมีสนามแม่เหล็กมาตัด จะเกิดแรงดันขึ้นที่ด้านข้างของแผ่น ชิปขยายและเปรียบเทียบแรงดันนี้ แล้วส่งออกเป็นสัญญาณดิจิทัลว่ามีแม่เหล็กอยู่ใกล้หรือไม่ ไม่ได้บอกว่าใกล้แค่ไหน",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์สนามแม่เหล็ก · แม่เหล็กถาวร",
+      "warn": "ชิปตอบสนองต่อขั้วแม่เหล็กด้านเดียว ถ้าเอาเข้าใกล้แล้วไม่มีอะไรเกิดขึ้น ให้กลับด้านแม่เหล็กก่อนแล้วลองใหม่",
       "pins": [
         [
-          "TRIG",
-          "D9",
+          "S / OUT",
+          "D2",
           "dig",
-          "สั่งปล่อยคลื่นเสียง",
-          "เซนเซอร์วัดระยะอัลตราโซนิก"
-        ],
-        [
-          "ECHO",
-          "D10",
-          "dig",
-          "รับสัญญาณสะท้อนกลับ",
-          "เซนเซอร์วัดระยะอัลตราโซนิก"
+          "สัญญาณดิจิทัล",
+          "เซนเซอร์สนามแม่เหล็ก"
         ],
         [
           "+ / VCC",
           "5V",
           "pwr",
           "จ่ายไฟ 5 โวลต์",
-          "เซนเซอร์วัดระยะอัลตราโซนิก"
+          "เซนเซอร์สนามแม่เหล็ก"
         ],
         [
           "- / GND",
           "GND",
           "gnd",
           "กราวด์ร่วม",
-          "เซนเซอร์วัดระยะอัลตราโซนิก"
+          "เซนเซอร์สนามแม่เหล็ก"
         ],
         [
           "SDA",
@@ -881,29 +881,29 @@
           "จอแสดงผล"
         ]
       ],
-      "result": "จอขึ้น Dist ตามด้วยเลขเซนติเมตร ไกลกว่า 50 ซม. ขึ้น SAFE ระหว่าง 10–50 ซม. ขึ้นแถบทึบที่ยาวขึ้นและกะพริบถี่ขึ้นเมื่อเข้าใกล้ ใกล้กว่า 10 ซม. ขึ้น STOP! ถ้าจับสัญญาณสะท้อนไม่ได้จะขึ้น Out of range",
-      "next": "วัดเทียบไม้บรรทัดจริงที่ระยะ 10, 30 และ 50 ซม. จดว่าคลาดเคลื่อนกี่เซนติเมตรในแต่ละระยะ",
-      "job": "เซนเซอร์ถอยหลังในรถยนต์ หุ่นยนต์หลบสิ่งกีดขวาง เครื่องวัดระดับน้ำในถังโดยไม่ต้องจุ่มลงน้ำ",
-      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\nconst int TRIG = 9, ECHO = 10;\nvoid setup() {\n  pinMode(TRIG, OUTPUT); pinMode(ECHO, INPUT);\n  lcd.init(); lcd.backlight();\n  lcd.print(\"Parking Sensor\");\n  delay(1500);\n  lcd.clear();\n}\nvoid loop() {\n  float cm = readDistance();\n  lcd.setCursor(0, 0);\n  if (cm <= 0) {\n    lcd.print(\"Out of range    \");\n    lcd.setCursor(0, 1); lcd.print(\"                \");\n    delay(250);\n    return;\n  }\n  lcd.print(\"Dist \");\n  lcd.print(cm, 0);\n  lcd.print(\" cm      \");\n  lcd.setCursor(0, 1);\n  if (cm > 50) {\n    lcd.print(\"SAFE            \");\n    delay(200);\n  } else if (cm > 10) {\n    int bars = map((long)cm, 10, 50, 16, 1);     // ใกล้ = แถบยาว\n    for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n    delay(map((long)cm, 10, 50, 60, 500));\n  } else {\n    lcd.print(\">>>  STOP!  <<<<\");\n    delay(450);\n  }\n}\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}",
+      "result": "จอบรรทัดบนขึ้น Hall: ตามด้วย 0 หรือ 1 บรรทัดล่างขึ้น Magnet Found หรือ No Magnet อัปเดตทุก 0.15 วินาที นำแม่เหล็กเข้าใกล้ราว 1–2 เซนติเมตรข้อความจะเปลี่ยนทันที ถ้าขึ้นกลับด้านให้สลับเงื่อนไข LOW กับ HIGH ในโค้ด",
+      "next": "ติดแม่เหล็กบนล้อจักรยานหนึ่งก้อน แล้วนับว่าล้อหมุนครบกี่รอบในหนึ่งนาที",
+      "job": "มาตรวัดความเร็วรถจักรยาน เซนเซอร์นับรอบมอเตอร์ ระบบตรวจว่าฝาครอบเครื่องจักรปิดสนิทหรือยัง",
+      "code": "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n\nconst int PIN_HALL = 2;\n\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n\n  Serial.begin(9600);\n\n  lcd.init();\n  lcd.backlight();\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Magnetic Sensor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  int hallValue = digitalRead(PIN_HALL);\n\n  lcd.setCursor(0, 0);\n  lcd.print(\"Hall: \");\n  lcd.print(hallValue);\n  lcd.print(\"          \");\n\n  lcd.setCursor(0, 1);\n\n  if (hallValue == LOW) {\n    Serial.println(\"พบแม่เหล็ก\");\n    lcd.print(\"Magnet Found    \");\n  } else {\n    Serial.println(\"ไม่พบแม่เหล็ก\");\n    lcd.print(\"No Magnet       \");\n  }\n\n  delay(150);\n}",
       "fun": {
-        "title": "เซนเซอร์ถอยรถ",
-        "desc": "ยิ่งเข้าใกล้บัซเซอร์ยิ่งบี๊บถี่ขึ้น ใกล้กว่า 10 ซม. จะดังยาวเตือนให้หยุด เหมือนระบบช่วยจอดในรถยนต์",
+        "title": "เครื่องวัดรอบ",
+        "desc": "ติดแม่เหล็กบนล้อแล้วหมุน เครื่องนับรอบและคำนวณเป็นรอบต่อนาทีให้ทุก 3 วินาที เหมือนมาตรวัดความเร็วรถจริง",
         "parts": "บัซเซอร์",
-        "code": "const int TRIG = 9, ECHO = 10;\nconst int BUZZER = 8;\nconst int LED    = 13;\n\nvoid setup() {\n  pinMode(TRIG, OUTPUT);\n  pinMode(ECHO, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"เลื่อนมือเข้าออกหน้าเซนเซอร์\");\n}\n\nvoid loop() {\n  float cm = readDistance();\n\n  if (cm <= 0) {                       // วัดไม่ได้ ข้ามรอบนี้\n    Serial.println(\"วัดไม่ได้\");\n    delay(200);\n    return;\n  }\n\n  Serial.print(cm, 0);\n  Serial.print(\" ซม.  \");\n\n  if (cm > 50) {                       // ไกล ปลอดภัย ไม่ต้องเตือน\n    Serial.println(\"ปลอดภัย\");\n    digitalWrite(LED, LOW);\n    delay(200);\n  } else if (cm > 10) {                // ใกล้ขึ้น บี๊บถี่ขึ้นเรื่อย ๆ\n    Serial.println(\"ระวัง\");\n    digitalWrite(LED, HIGH);\n    beep(1500, 60);\n    digitalWrite(LED, LOW);\n    delay(map((long)cm, 10, 50, 40, 500));   // ยิ่งใกล้ ยิ่งหน่วงสั้น\n  } else {                             // ใกล้มาก ดังยาว\n    Serial.println(\">> ใกล้มาก หยุด! <<\");\n    digitalWrite(LED, HIGH);\n    beep(2500, 400);\n    digitalWrite(LED, LOW);\n    delay(60);\n  }\n}\n\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);       // รอไม่เกิน 30 มิลลิวินาที\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+        "code": "const int PIN_HALL = 2;\nconst int BUZZER   = 8;\nconst int LED      = 13;\n\nint  turns = 0;\nbool near  = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"เอาแม่เหล็กผ่านหน้าเซนเซอร์ซ้ำ ๆ แล้วดูรอบต่อนาที\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอแม่เหล็ก\n\n  if (found && !near) {                          // เพิ่งผ่านมา นับ 1 รอบ\n    turns++;\n    digitalWrite(LED, HIGH);\n    beep(2200, 30);\n    digitalWrite(LED, LOW);\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปทุก 3 วินาที\n    int rpm = turns * 20;                        // 3 วินาที x 20 = 1 นาที\n    Serial.print(\"นับได้ \");\n    Serial.print(turns);\n    Serial.print(\" รอบ ใน 3 วินาที  =  \");\n    Serial.print(rpm);\n    Serial.println(\" รอบต่อนาที\");\n    turns = 0;\n    lastReport = millis();\n  }\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
       },
       "lcd": {
-        "title": "จอถอยรถพร้อมแถบเตือน",
-        "desc": "จอโชว์ระยะเป็นเซนติเมตร แถบล่างยาวขึ้นเมื่อเข้าใกล้ ใกล้กว่า 10 ซม. ขึ้น STOP! เต็มบรรทัด",
+        "title": "ทดสอบขั้วแม่เหล็ก + วัดรอบ",
+        "desc": "เอาแม่เหล็กขั้ว N และ S มาลองสลับกัน จะพบว่าติดแค่ขั้วเดียว ถ้ายังไม่ติดเลยจอจะขึ้น Flip magnet? ให้ลองกลับด้าน พอติดแล้วจะเปลี่ยนเป็นเครื่องวัดรอบต่อนาที",
         "parts": "บัซเซอร์ + จอแสดงผล 2 บรรทัด",
-        "code": "// จอแสดงผล โชว์ระยะเป็นเซนติเมตร + แถบเตือน ยิ่งใกล้ยิ่งบี๊บถี่\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int TRIG = 9, ECHO = 10;\nconst int BUZZER = 8;\n\nvoid setup() {\n  pinMode(TRIG, OUTPUT); pinMode(ECHO, INPUT); pinMode(BUZZER, OUTPUT);\n  lcd.init(); lcd.backlight();\n  lcd.print(\"Parking Sensor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  float cm = readDistance();\n\n  lcd.setCursor(0, 0);\n  if (cm <= 0) {\n    lcd.print(\"Out of range    \");\n    lcd.setCursor(0, 1); lcd.print(\"                \");\n    delay(250);\n    return;\n  }\n\n  lcd.print(\"Dist \");\n  lcd.print(cm, 0);\n  lcd.print(\" cm      \");\n\n  lcd.setCursor(0, 1);\n  if (cm > 50) {\n    lcd.print(\"SAFE            \");\n    delay(200);\n  } else if (cm > 10) {\n    int bars = map((long)cm, 10, 50, 16, 1);     // ใกล้ = แถบยาว\n    for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n    tone(BUZZER, 1500, 60);\n    delay(map((long)cm, 10, 50, 60, 500));       // ใกล้ = บี๊บถี่\n  } else {\n    lcd.print(\">>>  STOP!  <<<<\");\n    tone(BUZZER, 2500, 400);\n    delay(450);\n  }\n}\n\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}"
+        "code": "// สองอย่างในตัวเดียว : ทดสอบขั้วแม่เหล็ก N/S + เครื่องวัดรอบ\n// ชิปในเซนเซอร์ตอบสนองขั้วเดียวเท่านั้น เอาอีกขั้วมาจะไม่ติดเลย\n\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int PIN_HALL = 2;\nconst int BUZZER   = 8;\n\nint  turns = 0;\nint  totalHits = 0;\nbool near = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  lcd.init();\n  lcd.backlight();\n\n  lcd.print(\"Magnet Tester\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Try both poles!\");\n  delay(2500);\n  lcd.clear();\n  lcd.print(\"Waiting magnet\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอขั้วที่ถูก\n\n  if (found && !near) {                          // เพิ่งผ่านเข้ามา\n    turns++;\n    totalHits++;\n    tone(BUZZER, 2200, 30);\n    lcd.setCursor(0, 0);\n    lcd.print(\"FOUND! pole OK  \");\n  }\n  if (!found && near) {\n    lcd.setCursor(0, 0);\n    lcd.print(\"No magnet       \");\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปรอบทุก 3 วินาที\n    lcd.setCursor(0, 1);\n    if (totalHits == 0) {\n      lcd.print(\"Flip magnet? \");                // ยังไม่เคยติดเลย แนะให้กลับขั้ว\n      lcd.print(\"   \");\n    } else {\n      int rpm = turns * 20;                      // 3 วินาที x 20 = 1 นาที\n      lcd.print(\"RPM \");\n      lcd.print(rpm);\n      lcd.print(\"        \");\n    }\n    turns = 0;\n    lastReport = millis();\n  }\n}"
       },
-      "en": "Ultrasonic Sensor",
+      "en": "Magnetic Sensor",
       "steps": [
         "ต่อสายตามตารางด้านบน แล้วอัปโหลดโค้ด",
-        "วางไม้บรรทัดหน้าเซนเซอร์ วัดที่ระยะ 10, 30 และ 50 ซม. จดค่าบนจอเทียบกับของจริง",
-        "เลื่อนฝ่ามือเข้าใกล้ช้า ๆ ดูแถบบนจอยาวขึ้นและกะพริบถี่ขึ้น",
-        "เข้าใกล้กว่า 10 ซม. จอจะขึ้น STOP!",
-        "ลองวัดผ้าหรือฟองน้ำเทียบกับกระดาษแข็ง ดูว่าค่าต่างกันไหม"
+        "นำแม่เหล็กเข้าใกล้เซนเซอร์ราว 1–2 ซม. ดูจอเปลี่ยนเป็น Magnet Found",
+        "เอาแม่เหล็กออก จอกลับเป็น No Magnet",
+        "กลับขั้วแม่เหล็กแล้วลองใหม่ จะพบว่าตรวจเจอแค่ขั้วเดียว",
+        "ค่อย ๆ ถอยแม่เหล็กออก วัดว่าไกลสุดกี่เซนติเมตรที่ยังตรวจเจอ"
       ],
       "wiring": true
     },

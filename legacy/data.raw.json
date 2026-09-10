@@ -318,86 +318,6 @@
     },
     {
       "no": "08",
-      "base": 4,
-      "group": "eng",
-      "th": "เซนเซอร์สนามแม่เหล็ก",
-      "en": "HALL MAGNETIC SENSOR",
-      "how": "อาศัยปรากฏการณ์ฮอลล์ เมื่อมีกระแสไหลผ่านแผ่นสารกึ่งตัวนำและมีสนามแม่เหล็กมาตัด จะเกิดแรงดันขึ้นที่ด้านข้างของแผ่น ชิปจะขยายและเปรียบเทียบแรงดันนี้ แล้วส่งออกเป็นสัญญาณดิจิทัลว่ามีแม่เหล็กอยู่ใกล้หรือไม่",
-      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์สนามแม่เหล็ก · แม่เหล็กถาวร",
-      "warn": "ชิปตอบสนองต่อขั้วแม่เหล็กด้านเดียว ถ้าไม่ทำงานให้ลองกลับด้านแม่เหล็กก่อน",
-      "pins": [
-        [
-          "+ / VCC",
-          "5V",
-          "pwr",
-          "จ่ายไฟ 5 โวลต์"
-        ],
-        [
-          "- / GND",
-          "GND",
-          "gnd",
-          "กราวด์ร่วม"
-        ],
-        [
-          "S / OUT",
-          "D2",
-          "dig",
-          "สัญญาณดิจิทัล"
-        ]
-      ],
-      "result": "นำแม่เหล็กเข้าใกล้ประมาณ 1–2 เซนติเมตร ข้อความจะเปลี่ยนและ LED ติดทันที",
-      "next": "ติดแม่เหล็กบนล้อจักรยานแล้วนับรอบ คำนวณเป็นความเร็ว",
-      "job": "มาตรวัดความเร็วรถ เซนเซอร์นับรอบมอเตอร์ ระบบตรวจตำแหน่งฝาปิดในเครื่องจักร",
-      "code": "// เซนเซอร์ที่ 08 : เซนเซอร์สนามแม่เหล็ก (Hall Magnetic Sensor)\n// ฐานที่ 4  ·  บอร์ด Arduino Uno R3\n// การต่อสาย : +/VCC->5V , -/GND->GND , S/OUT->D2\n\nconst int PIN_HALL = 2;\nconst int PIN_LED  = 13;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(PIN_LED, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  if (digitalRead(PIN_HALL) == LOW) {\n    Serial.println(\"พบแม่เหล็ก\");\n    digitalWrite(PIN_LED, HIGH);\n  } else {\n    Serial.println(\"ไม่พบแม่เหล็ก\");\n    digitalWrite(PIN_LED, LOW);\n  }\n  delay(150);\n}",
-      "fun": {
-        "title": "เครื่องวัดรอบ",
-        "desc": "ติดแม่เหล็กบนล้อแล้วหมุน เครื่องนับรอบและคำนวณเป็นรอบต่อนาทีให้ทุก 3 วินาที เหมือนมาตรวัดความเร็วรถจริง",
-        "parts": "บัซเซอร์",
-        "code": "// ============================================================\n// ฐาน 4 · เซนเซอร์ 08 · เซนเซอร์สนามแม่เหล็ก\n// ลูกเล่น : เครื่องวัดรอบ ติดแม่เหล็กบนล้อแล้วหมุน คำนวณ RPM ให้\n// ต่อสาย  : เซนเซอร์ S->D2, +->5V, -->GND | บัซเซอร์ +->D8, -->GND\n// ============================================================\nconst int PIN_HALL = 2;\nconst int BUZZER   = 8;\nconst int LED      = 13;\n\nint  turns = 0;\nbool near  = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"เอาแม่เหล็กผ่านหน้าเซนเซอร์ซ้ำ ๆ แล้วดูรอบต่อนาที\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอแม่เหล็ก\n\n  if (found && !near) {                          // เพิ่งผ่านมา นับ 1 รอบ\n    turns++;\n    digitalWrite(LED, HIGH);\n    beep(2200, 30);\n    digitalWrite(LED, LOW);\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปทุก 3 วินาที\n    int rpm = turns * 20;                        // 3 วินาที x 20 = 1 นาที\n    Serial.print(\"นับได้ \");\n    Serial.print(turns);\n    Serial.print(\" รอบ ใน 3 วินาที  =  \");\n    Serial.print(rpm);\n    Serial.println(\" รอบต่อนาที\");\n    turns = 0;\n    lastReport = millis();\n  }\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
-      },
-      "lcd": {
-        "title": "ทดสอบขั้วแม่เหล็ก + วัดรอบ",
-        "desc": "เอาแม่เหล็กขั้ว N และ S มาลองสลับกัน จะพบว่าติดแค่ขั้วเดียว ถ้ายังไม่ติดเลยจอจะขึ้น Flip magnet? ให้ลองกลับด้าน พอติดแล้วจะเปลี่ยนเป็นเครื่องวัดรอบต่อนาที",
-        "parts": "บัซเซอร์ + จอ LCD1602 I2C",
-        "code": "// ============================================================\n// ฐาน 4 · เซนเซอร์ 08 · เซนเซอร์สนามแม่เหล็ก  [ลูกเล่น + LCD]\n// สองอย่างในตัวเดียว : ทดสอบขั้วแม่เหล็ก N/S + เครื่องวัดรอบ\n// ชิปในเซนเซอร์ตอบสนองขั้วเดียวเท่านั้น เอาอีกขั้วมาจะไม่ติดเลย\n// ต่อสาย : เซนเซอร์ S->D2 | บัซเซอร์ +->D8 | LCD SDA->A4, SCL->A5\n// ============================================================\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int PIN_HALL = 2;\nconst int BUZZER   = 8;\n\nint  turns = 0;\nint  totalHits = 0;\nbool near = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  lcd.init();\n  lcd.backlight();\n\n  lcd.print(\"Magnet Tester\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Try both poles!\");\n  delay(2500);\n  lcd.clear();\n  lcd.print(\"Waiting magnet\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอขั้วที่ถูก\n\n  if (found && !near) {                          // เพิ่งผ่านเข้ามา\n    turns++;\n    totalHits++;\n    tone(BUZZER, 2200, 30);\n    lcd.setCursor(0, 0);\n    lcd.print(\"FOUND! pole OK  \");\n  }\n  if (!found && near) {\n    lcd.setCursor(0, 0);\n    lcd.print(\"No magnet       \");\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปรอบทุก 3 วินาที\n    lcd.setCursor(0, 1);\n    if (totalHits == 0) {\n      lcd.print(\"Flip magnet? \");                // ยังไม่เคยติดเลย แนะให้กลับขั้ว\n      lcd.print(\"   \");\n    } else {\n      int rpm = turns * 20;                      // 3 วินาที x 20 = 1 นาที\n      lcd.print(\"RPM \");\n      lcd.print(rpm);\n      lcd.print(\"        \");\n    }\n    turns = 0;\n    lastReport = millis();\n  }\n}"
-      }
-    },
-    {
-      "no": "09",
-      "base": 5,
-      "group": "eng",
-      "th": "โมดูลเลเซอร์",
-      "en": "LASER EMIT MODULE",
-      "how": "ไดโอดเลเซอร์เปล่งลำแสงที่มีความยาวคลื่นเดียวและขนานกันมาก จึงเดินทางเป็นเส้นตรงได้ไกลโดยไม่บานออก เมื่อจับคู่กับตัวรับแสงอีกฝั่ง จะกลายเป็นม่านแสงที่รู้ได้ทันที ว่ามีวัตถุเคลื่อนผ่านมาตัดลำแสงหรือไม่",
-      "parts": "บอร์ด Arduino Uno R3 · โมดูลเลเซอร์ · โมดูลรับแสงเลเซอร์ (ถ้ามี)",
-      "warn": "ห้ามส่องเข้าตาตนเองหรือผู้อื่นโดยเด็ดขาด ให้ยิงลงพื้นหรือเข้าหาตัวรับเท่านั้น",
-      "pins": [
-        [
-          "S / SIG",
-          "D9",
-          "dig",
-          "สั่งเปิดปิดลำแสง"
-        ],
-        [
-          "- / GND",
-          "GND",
-          "gnd",
-          "กราวด์ร่วม"
-        ],
-        [
-          "รับแสง OUT",
-          "D2",
-          "dig",
-          "สัญญาณจากตัวรับ"
-        ]
-      ],
-      "result": "เห็นจุดแสงสีแดง เมื่อเอามือบังระหว่างเลเซอร์กับตัวรับ ข้อความจะเปลี่ยนเป็นแจ้งเตือน",
-      "next": "เพิ่มบัซเซอร์และตัวนับ ทำเป็นเครื่องนับคนเข้าออกประตู",
-      "job": "ม่านแสงนิรภัยหน้าเครื่องจักร เครื่องนับชิ้นงานบนสายพาน ระบบกันขโมย",
-      "code": "// เซนเซอร์ที่ 09 : โมดูลเลเซอร์ (Laser Emit Module)\n// ฐานที่ 5  ·  บอร์ด Arduino Uno R3\n// การต่อสาย : S/SIG->D9 , -/GND->GND , ตัวรับแสง OUT->D2\n// ห้ามส่องเข้าตาตนเองหรือผู้อื่นโดยเด็ดขาด\n\nconst int PIN_LASER = 9;\nconst int PIN_RECV  = 2;          // โมดูลรับแสง\n\nvoid setup() {\n  pinMode(PIN_LASER, OUTPUT);\n  pinMode(PIN_RECV, INPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  digitalWrite(PIN_LASER, HIGH);  // เปิดลำแสงค้างไว้\n  delay(50);\n\n  if (digitalRead(PIN_RECV) == HIGH) {\n    Serial.println(\"!! ลำแสงถูกบัง !!\");\n  } else {\n    Serial.println(\"ลำแสงปกติ\");\n  }\n  delay(300);\n}"
-    },
-    {
-      "no": "10",
       "base": 5,
       "group": "eng",
       "th": "เซนเซอร์วัดระยะอัลตราโซนิก",
@@ -446,6 +366,86 @@
         "desc": "จอโชว์ระยะเป็นเซนติเมตร แถบล่างยาวขึ้นเมื่อเข้าใกล้ ใกล้กว่า 10 ซม. ขึ้น STOP! เต็มบรรทัด",
         "parts": "บัซเซอร์ + จอ LCD1602 I2C",
         "code": "// ============================================================\n// ฐาน 5 · เซนเซอร์ 10 · อัลตราโซนิก  [ลูกเล่น + LCD]\n// LCD โชว์ระยะเป็นเซนติเมตร + แถบเตือน ยิ่งใกล้ยิ่งบี๊บถี่\n// ต่อสาย : TRIG->D9, ECHO->D10 | บัซเซอร์ +->D8 | LCD SDA->A4, SCL->A5\n// ============================================================\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int TRIG = 9, ECHO = 10;\nconst int BUZZER = 8;\n\nvoid setup() {\n  pinMode(TRIG, OUTPUT); pinMode(ECHO, INPUT); pinMode(BUZZER, OUTPUT);\n  lcd.init(); lcd.backlight();\n  lcd.print(\"Parking Sensor\");\n  delay(1500);\n  lcd.clear();\n}\n\nvoid loop() {\n  float cm = readDistance();\n\n  lcd.setCursor(0, 0);\n  if (cm <= 0) {\n    lcd.print(\"Out of range    \");\n    lcd.setCursor(0, 1); lcd.print(\"                \");\n    delay(250);\n    return;\n  }\n\n  lcd.print(\"Dist \");\n  lcd.print(cm, 0);\n  lcd.print(\" cm      \");\n\n  lcd.setCursor(0, 1);\n  if (cm > 50) {\n    lcd.print(\"SAFE            \");\n    delay(200);\n  } else if (cm > 10) {\n    int bars = map((long)cm, 10, 50, 16, 1);     // ใกล้ = แถบยาว\n    for (int i = 0; i < 16; i++) lcd.print(i < bars ? (char)255 : ' ');\n    tone(BUZZER, 1500, 60);\n    delay(map((long)cm, 10, 50, 60, 500));       // ใกล้ = บี๊บถี่\n  } else {\n    lcd.print(\">>>  STOP!  <<<<\");\n    tone(BUZZER, 2500, 400);\n    delay(450);\n  }\n}\n\nfloat readDistance() {\n  digitalWrite(TRIG, LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG, HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG, LOW);\n  long t = pulseIn(ECHO, HIGH, 30000);\n  if (t == 0) return -1;\n  return t * 0.0343 / 2;\n}"
+      }
+    },
+    {
+      "no": "09",
+      "base": 5,
+      "group": "eng",
+      "th": "โมดูลเลเซอร์",
+      "en": "LASER EMIT MODULE",
+      "how": "ไดโอดเลเซอร์เปล่งลำแสงที่มีความยาวคลื่นเดียวและขนานกันมาก จึงเดินทางเป็นเส้นตรงได้ไกลโดยไม่บานออก เมื่อจับคู่กับตัวรับแสงอีกฝั่ง จะกลายเป็นม่านแสงที่รู้ได้ทันที ว่ามีวัตถุเคลื่อนผ่านมาตัดลำแสงหรือไม่",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเลเซอร์ · โมดูลรับแสงเลเซอร์ (ถ้ามี)",
+      "warn": "ห้ามส่องเข้าตาตนเองหรือผู้อื่นโดยเด็ดขาด ให้ยิงลงพื้นหรือเข้าหาตัวรับเท่านั้น",
+      "pins": [
+        [
+          "S / SIG",
+          "D9",
+          "dig",
+          "สั่งเปิดปิดลำแสง"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม"
+        ],
+        [
+          "รับแสง OUT",
+          "D2",
+          "dig",
+          "สัญญาณจากตัวรับ"
+        ]
+      ],
+      "result": "เห็นจุดแสงสีแดง เมื่อเอามือบังระหว่างเลเซอร์กับตัวรับ ข้อความจะเปลี่ยนเป็นแจ้งเตือน",
+      "next": "เพิ่มบัซเซอร์และตัวนับ ทำเป็นเครื่องนับคนเข้าออกประตู",
+      "job": "ม่านแสงนิรภัยหน้าเครื่องจักร เครื่องนับชิ้นงานบนสายพาน ระบบกันขโมย",
+      "code": "// เซนเซอร์ที่ 09 : โมดูลเลเซอร์ (Laser Emit Module)\n// ฐานที่ 5  ·  บอร์ด Arduino Uno R3\n// การต่อสาย : S/SIG->D9 , -/GND->GND , ตัวรับแสง OUT->D2\n// ห้ามส่องเข้าตาตนเองหรือผู้อื่นโดยเด็ดขาด\n\nconst int PIN_LASER = 9;\nconst int PIN_RECV  = 2;          // โมดูลรับแสง\n\nvoid setup() {\n  pinMode(PIN_LASER, OUTPUT);\n  pinMode(PIN_RECV, INPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  digitalWrite(PIN_LASER, HIGH);  // เปิดลำแสงค้างไว้\n  delay(50);\n\n  if (digitalRead(PIN_RECV) == HIGH) {\n    Serial.println(\"!! ลำแสงถูกบัง !!\");\n  } else {\n    Serial.println(\"ลำแสงปกติ\");\n  }\n  delay(300);\n}"
+    },
+    {
+      "no": "10",
+      "base": 4,
+      "group": "eng",
+      "th": "เซนเซอร์สนามแม่เหล็ก",
+      "en": "HALL MAGNETIC SENSOR",
+      "how": "อาศัยปรากฏการณ์ฮอลล์ เมื่อมีกระแสไหลผ่านแผ่นสารกึ่งตัวนำและมีสนามแม่เหล็กมาตัด จะเกิดแรงดันขึ้นที่ด้านข้างของแผ่น ชิปจะขยายและเปรียบเทียบแรงดันนี้ แล้วส่งออกเป็นสัญญาณดิจิทัลว่ามีแม่เหล็กอยู่ใกล้หรือไม่",
+      "parts": "บอร์ด Arduino Uno R3 · โมดูลเซนเซอร์สนามแม่เหล็ก · แม่เหล็กถาวร",
+      "warn": "ชิปตอบสนองต่อขั้วแม่เหล็กด้านเดียว ถ้าไม่ทำงานให้ลองกลับด้านแม่เหล็กก่อน",
+      "pins": [
+        [
+          "+ / VCC",
+          "5V",
+          "pwr",
+          "จ่ายไฟ 5 โวลต์"
+        ],
+        [
+          "- / GND",
+          "GND",
+          "gnd",
+          "กราวด์ร่วม"
+        ],
+        [
+          "S / OUT",
+          "D2",
+          "dig",
+          "สัญญาณดิจิทัล"
+        ]
+      ],
+      "result": "นำแม่เหล็กเข้าใกล้ประมาณ 1–2 เซนติเมตร ข้อความจะเปลี่ยนและ LED ติดทันที",
+      "next": "ติดแม่เหล็กบนล้อจักรยานแล้วนับรอบ คำนวณเป็นความเร็ว",
+      "job": "มาตรวัดความเร็วรถ เซนเซอร์นับรอบมอเตอร์ ระบบตรวจตำแหน่งฝาปิดในเครื่องจักร",
+      "code": "// เซนเซอร์ที่ 08 : เซนเซอร์สนามแม่เหล็ก (Hall Magnetic Sensor)\n// ฐานที่ 4  ·  บอร์ด Arduino Uno R3\n// การต่อสาย : +/VCC->5V , -/GND->GND , S/OUT->D2\n\nconst int PIN_HALL = 2;\nconst int PIN_LED  = 13;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(PIN_LED, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  if (digitalRead(PIN_HALL) == LOW) {\n    Serial.println(\"พบแม่เหล็ก\");\n    digitalWrite(PIN_LED, HIGH);\n  } else {\n    Serial.println(\"ไม่พบแม่เหล็ก\");\n    digitalWrite(PIN_LED, LOW);\n  }\n  delay(150);\n}",
+      "fun": {
+        "title": "เครื่องวัดรอบ",
+        "desc": "ติดแม่เหล็กบนล้อแล้วหมุน เครื่องนับรอบและคำนวณเป็นรอบต่อนาทีให้ทุก 3 วินาที เหมือนมาตรวัดความเร็วรถจริง",
+        "parts": "บัซเซอร์",
+        "code": "// ============================================================\n// ฐาน 4 · เซนเซอร์ 08 · เซนเซอร์สนามแม่เหล็ก\n// ลูกเล่น : เครื่องวัดรอบ ติดแม่เหล็กบนล้อแล้วหมุน คำนวณ RPM ให้\n// ต่อสาย  : เซนเซอร์ S->D2, +->5V, -->GND | บัซเซอร์ +->D8, -->GND\n// ============================================================\nconst int PIN_HALL = 2;\nconst int BUZZER   = 8;\nconst int LED      = 13;\n\nint  turns = 0;\nbool near  = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"เอาแม่เหล็กผ่านหน้าเซนเซอร์ซ้ำ ๆ แล้วดูรอบต่อนาที\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอแม่เหล็ก\n\n  if (found && !near) {                          // เพิ่งผ่านมา นับ 1 รอบ\n    turns++;\n    digitalWrite(LED, HIGH);\n    beep(2200, 30);\n    digitalWrite(LED, LOW);\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปทุก 3 วินาที\n    int rpm = turns * 20;                        // 3 วินาที x 20 = 1 นาที\n    Serial.print(\"นับได้ \");\n    Serial.print(turns);\n    Serial.print(\" รอบ ใน 3 วินาที  =  \");\n    Serial.print(rpm);\n    Serial.println(\" รอบต่อนาที\");\n    turns = 0;\n    lastReport = millis();\n  }\n}\n\nvoid beep(int freq, int ms) {          // บัซเซอร์ passive ใช้ tone()\n  tone(BUZZER, freq);\n  delay(ms);\n  noTone(BUZZER);\n}"
+      },
+      "lcd": {
+        "title": "ทดสอบขั้วแม่เหล็ก + วัดรอบ",
+        "desc": "เอาแม่เหล็กขั้ว N และ S มาลองสลับกัน จะพบว่าติดแค่ขั้วเดียว ถ้ายังไม่ติดเลยจอจะขึ้น Flip magnet? ให้ลองกลับด้าน พอติดแล้วจะเปลี่ยนเป็นเครื่องวัดรอบต่อนาที",
+        "parts": "บัซเซอร์ + จอ LCD1602 I2C",
+        "code": "// ============================================================\n// ฐาน 4 · เซนเซอร์ 08 · เซนเซอร์สนามแม่เหล็ก  [ลูกเล่น + LCD]\n// สองอย่างในตัวเดียว : ทดสอบขั้วแม่เหล็ก N/S + เครื่องวัดรอบ\n// ชิปในเซนเซอร์ตอบสนองขั้วเดียวเท่านั้น เอาอีกขั้วมาจะไม่ติดเลย\n// ต่อสาย : เซนเซอร์ S->D2 | บัซเซอร์ +->D8 | LCD SDA->A4, SCL->A5\n// ============================================================\n#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\n\nconst int PIN_HALL = 2;\nconst int BUZZER   = 8;\n\nint  turns = 0;\nint  totalHits = 0;\nbool near = false;\nunsigned long lastReport = 0;\n\nvoid setup() {\n  pinMode(PIN_HALL, INPUT);\n  pinMode(BUZZER, OUTPUT);\n  lcd.init();\n  lcd.backlight();\n\n  lcd.print(\"Magnet Tester\");\n  lcd.setCursor(0, 1);\n  lcd.print(\"Try both poles!\");\n  delay(2500);\n  lcd.clear();\n  lcd.print(\"Waiting magnet\");\n}\n\nvoid loop() {\n  bool found = (digitalRead(PIN_HALL) == LOW);   // LOW = เจอขั้วที่ถูก\n\n  if (found && !near) {                          // เพิ่งผ่านเข้ามา\n    turns++;\n    totalHits++;\n    tone(BUZZER, 2200, 30);\n    lcd.setCursor(0, 0);\n    lcd.print(\"FOUND! pole OK  \");\n  }\n  if (!found && near) {\n    lcd.setCursor(0, 0);\n    lcd.print(\"No magnet       \");\n  }\n  near = found;\n\n  if (millis() - lastReport >= 3000) {           // สรุปรอบทุก 3 วินาที\n    lcd.setCursor(0, 1);\n    if (totalHits == 0) {\n      lcd.print(\"Flip magnet? \");                // ยังไม่เคยติดเลย แนะให้กลับขั้ว\n      lcd.print(\"   \");\n    } else {\n      int rpm = turns * 20;                      // 3 วินาที x 20 = 1 นาที\n      lcd.print(\"RPM \");\n      lcd.print(rpm);\n      lcd.print(\"        \");\n    }\n    turns = 0;\n    lastReport = millis();\n  }\n}"
       }
     },
     {
