@@ -1,16 +1,16 @@
 import StationGrid from "@/components/StationGrid";
 
-/** ลิงก์ทางการของผู้ผลิตชิป CH340 (Nanjing Qinheng / WCH) */
+/** หน้ารวมไดรเวอร์ CH340 ฝั่ง Windows เป็นฉบับแปลไทย */
 const DRIVERS = [
   {
     os: "Windows",
-    href: "https://www.wch-ic.com/downloads/CH341SER_EXE.html",
-    note: "แตกไฟล์แล้วเปิด SETUP.EXE กด INSTALL",
+    href: "https://sparks-gogo-co-nz.translate.goog/ch340.html?_x_tr_sl=en&_x_tr_tl=th&_x_tr_hl=th&_x_tr_pto=tc",
+    note: "หน้าแปลไทย เลือกไฟล์หัวข้อ Windows",
   },
   {
     os: "macOS",
-    href: "https://www.wch-ic.com/downloads/CH34XSER_MAC_ZIP.html",
-    note: "แตกไฟล์แล้วเปิด CH34xVCPDriver.pkg",
+    href: "https://sparks.gogo.co.nz/ch340.html?srsltid=AfmBOoqLPlPbpom3UtI44_BMB_zlhH-LidgxEAML0bHjPrA1BIlSBXCk",
+    note: "เลือกไฟล์หัวข้อ macOS ในหน้านี้",
   },
 ];
 
@@ -43,7 +43,7 @@ export default function HomePage() {
             </a>
           ))}
         </div>
-        <p className="drivers-src">ลิงก์ดาวน์โหลดจากเว็บไซต์ของผู้ผลิตชิปโดยตรง</p>
+        <p className="drivers-src">หน้ารวมไดรเวอร์ CH340 พร้อมวิธีติดตั้งทุกระบบปฏิบัติการ</p>
       </section>
     </div>
   );
