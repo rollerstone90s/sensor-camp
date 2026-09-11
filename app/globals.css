@@ -405,13 +405,10 @@ main {
   color: var(--ink-2);
   text-wrap: pretty;
 }
-.drivers-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-}
 .driver {
   display: grid;
+  width: fit-content;
+  min-width: min(280px, 100%);
   gap: 2px;
   padding: 12px 15px;
   background: var(--paper);

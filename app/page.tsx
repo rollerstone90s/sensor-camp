@@ -1,18 +1,8 @@
 import StationGrid from "@/components/StationGrid";
 
-/** หน้ารวมไดรเวอร์ CH340 ฝั่ง Windows เป็นฉบับแปลไทย */
-const DRIVERS = [
-  {
-    os: "Windows",
-    href: "https://sparks-gogo-co-nz.translate.goog/ch340.html?_x_tr_sl=en&_x_tr_tl=th&_x_tr_hl=th&_x_tr_pto=tc",
-    note: "หน้าแปลไทย เลือกไฟล์หัวข้อ Windows",
-  },
-  {
-    os: "macOS",
-    href: "https://sparks.gogo.co.nz/ch340.html?srsltid=AfmBOoqLPlPbpom3UtI44_BMB_zlhH-LidgxEAML0bHjPrA1BIlSBXCk",
-    note: "เลือกไฟล์หัวข้อ macOS ในหน้านี้",
-  },
-];
+/** หน้ารวมไดรเวอร์ CH340 ทุกระบบปฏิบัติการ ฉบับแปลไทย */
+const DRIVER_URL =
+  "https://sparks-gogo-co-nz.translate.goog/ch340.html?_x_tr_sl=en&_x_tr_tl=th&_x_tr_hl=th&_x_tr_pto=tc";
 
 export default function HomePage() {
   return (
@@ -35,15 +25,11 @@ export default function HomePage() {
           บอร์ดราคาประหยัดส่วนใหญ่ใช้ชิปแปลงสัญญาณรุ่น CH340 ซึ่งต้องลงไดรเวอร์เพิ่มก่อน
           เครื่องจึงจะมองเห็น ลงครั้งเดียวใช้ได้ตลอด แล้วเสียบสายใหม่อีกครั้ง
         </p>
-        <div className="drivers-list">
-          {DRIVERS.map((d) => (
-            <a key={d.os} className="driver" href={d.href} target="_blank" rel="noopener noreferrer">
-              <span className="driver-os">ดาวน์โหลดสำหรับ {d.os}</span>
-              <span className="driver-note">{d.note}</span>
-            </a>
-          ))}
-        </div>
-        <p className="drivers-src">หน้ารวมไดรเวอร์ CH340 พร้อมวิธีติดตั้งทุกระบบปฏิบัติการ</p>
+        <a className="driver" href={DRIVER_URL} target="_blank" rel="noopener noreferrer">
+          <span className="driver-os">ดาวน์โหลดไดรเวอร์ CH340</span>
+          <span className="driver-note">ใช้ได้ทั้ง Windows และ macOS</span>
+        </a>
+        <p className="drivers-src">ในหน้านี้เลือกไฟล์ตามระบบปฏิบัติการของเครื่อง พร้อมวิธีติดตั้ง</p>
       </section>
     </div>
   );
